@@ -6,12 +6,14 @@ using UnityEngine.AI;
 [RequireComponent(typeof(Animator))]
 public class HumanAI : MonoBehaviour
 {
-    public enum State { Idle, Alerted, Fleeing }
+    public enum State { Idle, Walking, Alerted, Fleeing }
 
     [Header("Current State")]
     public State currentState = State.Idle;
 
     [Header("Speed Settings (Difficulty)")]
+    [Tooltip("Base walking speed for wandering around.")]
+    public float walkSpeed = 2.0f;
     [Tooltip("Speed when running away from the vampire.")]
     public float fleeSpeed = 5.0f;
 
@@ -22,8 +24,14 @@ public class HumanAI : MonoBehaviour
     public LayerMask obstacleMask;
     public float detectionDelay = 5.0f;
 
+    [Header("Wander/Idle Timing")]
+    public float wanderRadius = 10f;
+    public float walkDuration = 5f;
+    public float idleDuration = 3f;
+
     private NavMeshAgent agent;
     private Animator animator;
+    private float stateTimer;
 
     private void Awake()
     {
@@ -39,24 +47,29 @@ public class HumanAI : MonoBehaviour
             if (playerObj != null) vampirePlayer = playerObj.transform;
         }
 
-        // Start in complete Idle
         SetIdle();
     }
 
     private void Update()
     {
-        // 1. Check line of sight to Vampire if not already fleeing or alerted
-        if (currentState == State.Idle && CheckLineOfSight())
+        // 1. Check line of sight to Vampire (only during Idle or Walking)
+        if ((currentState == State.Idle || currentState == State.Walking) && CheckLineOfSight())
         {
             StartCoroutine(AlertAndFleeSequence());
         }
 
-        // 2. Handle state behavior
+        // 2. State Machine behavior
         switch (currentState)
         {
             case State.Idle:
+                HandleIdleState();
+                break;
+
+            case State.Walking:
+                HandleWalkingState();
+                break;
+
             case State.Alerted:
-                // Ensure zero physical movement and clear pathing to stop sliding
                 agent.isStopped = true;
                 agent.velocity = Vector3.zero;
                 break;
@@ -66,7 +79,7 @@ public class HumanAI : MonoBehaviour
                 break;
         }
 
-        // 3. Drive Animator with physical velocity magnitude
+        // 3. Update Animator Speed parameter continuously
         float currentSpeed = agent.velocity.magnitude;
         animator.SetFloat("Speed", currentSpeed);
     }
@@ -76,7 +89,46 @@ public class HumanAI : MonoBehaviour
         currentState = State.Idle;
         agent.isStopped = true;
         agent.velocity = Vector3.zero;
-        agent.ResetPath();
+        stateTimer = 0f;
+    }
+
+    private void SetNewWanderDestination()
+    {
+        Vector3 randomDirection = Random.insideUnitSphere * wanderRadius + transform.position;
+        if (NavMesh.SamplePosition(randomDirection, out NavMeshHit hit, wanderRadius, NavMesh.AllAreas))
+        {
+            currentState = State.Walking;
+            agent.speed = walkSpeed;
+            agent.isStopped = false;
+            agent.SetDestination(hit.position);
+            stateTimer = 0f;
+        }
+    }
+
+    private void HandleIdleState()
+    {
+        stateTimer += Time.deltaTime;
+        if (stateTimer >= idleDuration)
+        {
+            SetNewWanderDestination();
+        }
+    }
+
+    private void HandleWalkingState()
+    {
+        stateTimer += Time.deltaTime;
+
+        // Give the NavMeshAgent a moment (0.2s) to compute the path before checking arrival
+        if (stateTimer > 0.2f && !agent.pathPending)
+        {
+            bool reachedDestination = agent.remainingDistance <= agent.stoppingDistance;
+            bool timeExpired = stateTimer >= walkDuration;
+
+            if (reachedDestination || timeExpired)
+            {
+                SetIdle();
+            }
+        }
     }
 
     private bool CheckLineOfSight()
@@ -106,32 +158,44 @@ public class HumanAI : MonoBehaviour
         agent.isStopped = true;
         agent.velocity = Vector3.zero;
 
-        // 5-second frozen interval before fleeing
+        // Wait 5 seconds
         yield return new WaitForSeconds(detectionDelay);
 
         // Transition to Fleeing
         currentState = State.Fleeing;
-        agent.isStopped = false;
         agent.speed = fleeSpeed;
+        agent.isStopped = false; // Ensure agent is explicitly un-paused
     }
 
     private void HandleFleeing()
     {
         if (vampirePlayer == null) return;
 
-        // Run directly away from vampire
-        Vector3 runDirection = transform.position - vampirePlayer.position;
-        Vector3 fleeTarget = transform.position + runDirection.normalized * 10f;
+        // Ensure agent is unstopped during fleeing updates
+        agent.isStopped = false;
 
-        if (NavMesh.SamplePosition(fleeTarget, out NavMeshHit hit, 10f, NavMesh.AllAreas))
+        // Calculate flee direction away from vampire
+        Vector3 runDirection = (transform.position - vampirePlayer.position).normalized;
+        Vector3 fleeTarget = transform.position + runDirection * 15f;
+
+        // Check if fleeTarget is valid on the NavMesh
+        if (NavMesh.SamplePosition(fleeTarget, out NavMeshHit hit, 15f, NavMesh.AllAreas))
         {
             agent.SetDestination(hit.position);
+        }
+        else
+        {
+            // Fallback: If running straight back hits an obstacle/edge, pick a random spot far away
+            Vector3 randomFlee = transform.position + (Quaternion.Euler(0, Random.Range(-45, 45), 0) * runDirection) * 15f;
+            if (NavMesh.SamplePosition(randomFlee, out NavMeshHit fallbackHit, 15f, NavMesh.AllAreas))
+            {
+                agent.SetDestination(fallbackHit.position);
+            }
         }
     }
 
     private void OnDrawGizmosSelected()
     {
-        // Vision cone visualization in Scene view
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, detectionRadius);
     }
