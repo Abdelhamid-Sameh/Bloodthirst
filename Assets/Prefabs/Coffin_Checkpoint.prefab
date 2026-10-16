@@ -857,7 +857,7 @@ GameObject:
   m_Component:
   - component: {fileID: 4694082924746265380}
   - component: {fileID: 420403980595543285}
-  m_Layer: 0
+  m_Layer: 2
   m_Name: CheckpointTrigger
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1097,6 +1097,7 @@ GameObject:
   m_Component:
   - component: {fileID: 5784454477061184313}
   - component: {fileID: 5729067202999954305}
+  - component: {fileID: 956880716877983575}
   m_Layer: 0
   m_Name: Coffin_Checkpoint
   m_TagString: Untagged
@@ -1148,6 +1149,23 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1.15, y: 0.6, z: 2.25}
   m_Center: {x: 0.1, y: 0.3, z: 0}
+--- !u!114 &956880716877983575
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5130613656789538491}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 675fa7eb1c1d1cb43bc5db2d62bcec6f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CoffinCheckpoint
+  respawnOffset: {x: -1.3, y: 0, z: 0}
+  glow: {fileID: 4484385188629234696}
+  idleGlowIntensity: 14
+  activeGlowIntensity: 32
+  activeGlowRange: 7.5
 --- !u!1 &5135964738249958692
 GameObject:
   m_ObjectHideFlags: 0
