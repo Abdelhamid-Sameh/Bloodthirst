@@ -35,7 +35,9 @@ public class HumanAI : MonoBehaviour
 
     private NavMeshAgent agent;
     private Animator animator;
-    private float stateTimer;
+    
+    private float fleeRepathTimer;
+private float stateTimer;
 
     /// <summary>False once the vampire has killed this human.</summary>
     public bool IsAlive => currentState != State.Dead;
@@ -185,30 +187,47 @@ public class HumanAI : MonoBehaviour
         agent.isStopped = false; // Ensure agent is explicitly un-paused
     }
 
-    private void HandleFleeing()
+private void HandleFleeing()
     {
         if (vampirePlayer == null) return;
 
-        // Ensure agent is unstopped during fleeing updates
         agent.isStopped = false;
 
-        // Calculate flee direction away from vampire
-        Vector3 runDirection = (transform.position - vampirePlayer.position).normalized;
-        Vector3 fleeTarget = transform.position + runDirection * 15f;
+        // Calling SetDestination every frame cancels the path that is still being computed, so the agent
+        // never receives a path and stands still. Pick a flee point only every so often, or on arrival.
+        fleeRepathTimer -= Time.deltaTime;
+        bool arrived = agent.hasPath && !agent.pathPending && agent.remainingDistance <= agent.stoppingDistance + 0.5f;
+        if (fleeRepathTimer > 0f && !arrived) return;
+        fleeRepathTimer = 0.5f;
 
-        // Check if fleeTarget is valid on the NavMesh
-        if (NavMesh.SamplePosition(fleeTarget, out NavMeshHit hit, 15f, NavMesh.AllAreas))
+        // Flat direction away from the vampire (ignore height differences)
+        Vector3 awayDir = transform.position - vampirePlayer.position;
+        awayDir.y = 0f;
+        if (awayDir.sqrMagnitude < 0.01f) awayDir = -transform.forward;
+        awayDir.Normalize();
+
+        float currentDist = Vector3.Distance(transform.position, vampirePlayer.position);
+        float[] angles = { 0f, 35f, -35f, 70f, -70f, 110f, -110f };
+        NavMeshPath path = new NavMeshPath();
+
+        foreach (float angle in angles)
         {
-            agent.SetDestination(hit.position);
-        }
-        else
-        {
-            // Fallback: If running straight back hits an obstacle/edge, pick a random spot far away
-            Vector3 randomFlee = transform.position + (Quaternion.Euler(0, Random.Range(-45, 45), 0) * runDirection) * 15f;
-            if (NavMesh.SamplePosition(randomFlee, out NavMeshHit fallbackHit, 15f, NavMesh.AllAreas))
+            Vector3 candidate = transform.position + Quaternion.Euler(0f, angle, 0f) * awayDir * 15f;
+            if (!NavMesh.SamplePosition(candidate, out NavMeshHit hit, 5f, NavMesh.AllAreas)) continue;
+
+            // The point must take the human farther from the vampire and be fully reachable.
+            if (Vector3.Distance(hit.position, vampirePlayer.position) < currentDist + 3f) continue;
+            if (agent.CalculatePath(hit.position, path) && path.status == NavMeshPathStatus.PathComplete)
             {
-                agent.SetDestination(fallbackHit.position);
+                agent.SetPath(path);
+                return;
             }
+        }
+
+        // Nothing better found: keep moving away on whatever the NavMesh offers.
+        if (NavMesh.SamplePosition(transform.position + awayDir * 15f, out NavMeshHit fallback, 15f, NavMesh.AllAreas))
+        {
+            agent.SetDestination(fallback.position);
         }
     }
 
