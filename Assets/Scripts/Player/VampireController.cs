@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.InputSystem;
@@ -9,9 +10,12 @@ using UnityEngine.InputSystem;
 /// WASD / arrows : run, relative to the camera (W = up the screen)
 /// Mouse         : when standing still he turns on the spot to face the cursor
 /// Space         : jump
-/// E / left click: bite the nearest human in front of him (bites the air if nobody is close)
-/// F             : rest in a nearby coffin (sets the checkpoint)
-/// K / R         : debug only - die / respawn at the last coffin
+/// E / left click: bite a human within reach in front of him (does nothing if nobody is in reach)
+/// F             : rest in a nearby coffin (saves the checkpoint)
+/// K / R         : debug only - die / rise again from the last coffin
+///
+/// The level starts with him rising out of the nearest closed coffin, and he rises from his last
+/// coffin after dying.
 /// </summary>
 [RequireComponent(typeof(CharacterController))]
 [RequireComponent(typeof(Animator))]
@@ -36,36 +40,51 @@ public class VampireController : MonoBehaviour
 
     [Header("Bite")]
     public float biteRange = 2.2f;
-    [Range(0, 360)] public float biteAngle = 120f;
+    [Range(0, 360)] public float biteAngle = 140f;
     [Tooltip("Distance in front of him where the victim is held during the bite.")]
     public float victimHoldDistance = 0.75f;
     [Tooltip("Point in the bite animation (0-1) at which the victim dies.")]
     [Range(0, 1)] public float killAtNormalizedTime = 0.7f;
 
-    [Header("Coffin checkpoints")]
+    [Header("Coffins")]
     public float coffinRange = 2.8f;
+    [Tooltip("Start the level lying in the nearest coffin and rise out of it.")]
+    public bool startInCoffin = true;
+    [Tooltip("Coffin to rise from at the start. Empty = the nearest one.")]
+    public CoffinCheckpoint startCoffin;
+    [Tooltip("Seconds before he starts rising when the level loads.")]
+    public float introDelay = 0.8f;
+    [Tooltip("Smoke burst played when he vanishes from the coffin and reappears in front of it.")]
+    public GameObject vanishEffect;
 
     [Header("Cape")]
     public Cloth capeCloth;
     public Vector3 jumpWindForce = new Vector3(0f, 5f, -2f);
 
     [Header("Debug")]
-    [Tooltip("K kills the vampire and R respawns him at the last coffin, for testing the death animation.")]
+    [Tooltip("K kills the vampire and R makes him rise again from his last coffin.")]
     public bool debugKeys = true;
 
     [Header("Events - hook health, UI and sound here")]
-    [Tooltip("Fires when a bite finishes. The argument is the victim, or null if he bit the air.")]
+    [Tooltip("Fires when a bite finishes. The argument is the victim.")]
     public UnityEvent<GameObject> onBite = new UnityEvent<GameObject>();
     public UnityEvent<CoffinCheckpoint> onCheckpoint = new UnityEvent<CoffinCheckpoint>();
+    [Tooltip("Fires when he has climbed out of a coffin (level start and after every respawn).")]
+    public UnityEvent onEmerged = new UnityEvent();
     public UnityEvent onDeath = new UnityEvent();
     public UnityEvent onRespawn = new UnityEvent();
 
     public bool IsDead { get; private set; }
-    /// <summary>True while an action animation (bite, coffin) is playing and movement is locked.</summary>
+    /// <summary>True while an action or coffin sequence is playing and movement is locked.</summary>
     public bool IsBusy { get; private set; }
+    public bool IsRunning { get; private set; }
+    public bool IsGrounded => IsGroundedForActions();
+    /// <summary>The human he would bite if E were pressed now, or null.</summary>
+    public HumanAI BiteTargetInReach { get; private set; }
+    /// <summary>The coffin he would rest in if F were pressed now, or null.</summary>
+    public CoffinCheckpoint CoffinInReach { get; private set; }
 
-    // Animator state names and parameters (VampireGameplay.controller)
-    const string BiteState = "Bite", CoffinState = "Coffin Checkpoint";
+    const string BiteState = "Bite", LieDownState = "Coffin Checkpoint", RiseState = "Coffin Rise", IdleState = "Idle";
     static readonly int SpeedHash = Animator.StringToHash("Speed");
     static readonly int TurnHash = Animator.StringToHash("Turn");
     static readonly int GroundedHash = Animator.StringToHash("IsGrounded");
@@ -77,32 +96,55 @@ public class VampireController : MonoBehaviour
 
     CharacterController controller;
     Animator animator;
+    VampireAudio sfx;
     float verticalVelocity;
     float timeSinceGrounded;
+    float airTime;
     bool wasAnimGrounded = true;
     bool turningInPlace;
-    Vector3 respawnPosition;
-    Quaternion respawnRotation;
+    bool inSequence;
     HumanAI currentVictim;
+    CoffinCheckpoint respawnCoffin;
+    Vector3 fallbackRespawnPosition;
+    Quaternion fallbackRespawnRotation;
+    readonly List<Renderer> visibleRenderers = new List<Renderer>();
 
     void Awake()
     {
         controller = GetComponent<CharacterController>();
         animator = GetComponent<Animator>();
+        sfx = GetComponent<VampireAudio>();
         animator.applyRootMotion = false;
         if (viewCamera == null) viewCamera = Camera.main;
-        respawnPosition = transform.position;
-        respawnRotation = transform.rotation;
+        fallbackRespawnPosition = transform.position;
+        fallbackRespawnRotation = transform.rotation;
+        foreach (Renderer r in GetComponentsInChildren<Renderer>(true))
+            if (r.enabled) visibleRenderers.Add(r);
+    }
+
+    void Start()
+    {
+        if (!startInCoffin) return;
+        CoffinCheckpoint coffin = startCoffin != null ? startCoffin : FindNearestCoffin(transform.position, 8f);
+        if (coffin == null) return;
+        coffin.Activate();
+        respawnCoffin = coffin;
+        StartCoroutine(EmergeRoutine(coffin, introDelay));
     }
 
     void Update()
     {
+        if (GameState.Paused) return;
         Keyboard kb = Keyboard.current;
         if (kb == null) return;
+
+        if (inSequence) return; // coffin sequences move him directly
 
         if (IsDead)
         {
             UpdateGravity(false);
+            BiteTargetInReach = null;
+            CoffinInReach = null;
             if (debugKeys && kb.rKey.wasPressedThisFrame) Respawn();
             return;
         }
@@ -116,24 +158,26 @@ public class VampireController : MonoBehaviour
         if (IsBusy)
         {
             UpdateGravity(false);
+            BiteTargetInReach = null;
+            CoffinInReach = null;
             return;
         }
+
+        bool grounded = IsGroundedForActions();
+        BiteTargetInReach = grounded ? FindVictim() : null;
+        CoffinInReach = grounded ? FindNearestCoffin(transform.position, coffinRange) : null;
 
         bool bitePressed = kb.eKey.wasPressedThisFrame || (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame);
-        if (bitePressed && IsGroundedForActions())
+        if (bitePressed && BiteTargetInReach != null)
         {
-            StartCoroutine(BiteRoutine(FindVictim()));
+            StartCoroutine(BiteRoutine(BiteTargetInReach));
             return;
         }
 
-        if (kb.fKey.wasPressedThisFrame && IsGroundedForActions())
+        if (kb.fKey.wasPressedThisFrame && CoffinInReach != null)
         {
-            CoffinCheckpoint coffin = FindCoffin();
-            if (coffin != null)
-            {
-                StartCoroutine(CheckpointRoutine(coffin));
-                return;
-            }
+            StartCoroutine(RestInCoffinRoutine(CoffinInReach));
+            return;
         }
 
         Move(kb);
@@ -158,13 +202,13 @@ public class VampireController : MonoBehaviour
         }
         Vector3 moveDir = forward * input.y + right * input.x;
         bool moving = moveDir.sqrMagnitude > 0.01f;
+        IsRunning = moving;
 
         float turn = 0f;
         if (moving)
         {
             turningInPlace = false;
-            Quaternion targetRot = Quaternion.LookRotation(moveDir);
-            transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRot, runTurnSpeed * Time.deltaTime);
+            transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(moveDir), runTurnSpeed * Time.deltaTime);
         }
         else if (faceMouseWhenIdle && TryGetCursorPoint(out Vector3 cursor))
         {
@@ -183,9 +227,8 @@ public class VampireController : MonoBehaviour
             }
         }
 
-        bool jumped = UpdateGravity(Keyboard.current.spaceKey.wasPressedThisFrame);
-        Vector3 motion = moveDir * moveSpeed + Vector3.up * verticalVelocity;
-        controller.Move(motion * Time.deltaTime);
+        bool jumped = UpdateGravity(kb.spaceKey.wasPressedThisFrame);
+        controller.Move((moveDir * moveSpeed + Vector3.up * verticalVelocity) * Time.deltaTime);
 
         animator.SetFloat(SpeedHash, moving ? 1f : 0f);
         animator.SetFloat(TurnHash, moving ? 0f : turn, 0.05f, Time.deltaTime);
@@ -196,8 +239,19 @@ public class VampireController : MonoBehaviour
     /// <summary>Applies gravity (and a jump if requested and allowed). Returns true if a jump started.</summary>
     bool UpdateGravity(bool jumpRequested)
     {
+        if (!controller.enabled) return false;
         bool grounded = controller.isGrounded;
-        if (grounded) timeSinceGrounded = 0f; else timeSinceGrounded += Time.deltaTime;
+        if (grounded)
+        {
+            if (airTime > 0.3f && sfx != null) sfx.PlayLand();
+            airTime = 0f;
+            timeSinceGrounded = 0f;
+        }
+        else
+        {
+            airTime += Time.deltaTime;
+            timeSinceGrounded += Time.deltaTime;
+        }
 
         if (grounded && verticalVelocity < 0f)
         {
@@ -212,6 +266,7 @@ public class VampireController : MonoBehaviour
             verticalVelocity = Mathf.Sqrt(jumpHeight * -2f * gravity);
             jumped = true;
             if (capeCloth != null) capeCloth.externalAcceleration = jumpWindForce;
+            if (sfx != null) sfx.PlayJump();
         }
 
         verticalVelocity += gravity * Time.deltaTime;
@@ -247,6 +302,7 @@ public class VampireController : MonoBehaviour
         animator.SetFloat(SpeedHash, 0f);
         animator.SetFloat(TurnHash, 0f);
         turningInPlace = false;
+        IsRunning = false;
     }
 
     // ---------------------------------------------------------------- bite
@@ -273,63 +329,163 @@ public class VampireController : MonoBehaviour
         IsBusy = true;
         StopLocomotionAnimation();
 
-        if (victim != null)
-        {
-            Vector3 to = Vector3.ProjectOnPlane(victim.transform.position - transform.position, Vector3.up);
-            if (to.sqrMagnitude > 0.001f) transform.rotation = Quaternion.LookRotation(to);
-            victim.OnCaptured(transform);
-            currentVictim = victim;
-            Vector3 hold = transform.position + transform.forward * victimHoldDistance;
-            hold.y = victim.transform.position.y;
-            victim.transform.position = hold;
-        }
+        Vector3 to = Vector3.ProjectOnPlane(victim.transform.position - transform.position, Vector3.up);
+        if (to.sqrMagnitude > 0.001f) transform.rotation = Quaternion.LookRotation(to);
+        victim.OnCaptured(transform);
+        currentVictim = victim;
+        Vector3 hold = transform.position + transform.forward * victimHoldDistance;
+        hold.y = victim.transform.position.y;
+        victim.transform.position = hold;
 
         animator.SetTrigger(BiteHash);
+        if (sfx != null) sfx.PlayBite();
         bool killed = false;
         yield return WaitForAction(BiteState, t =>
         {
-            if (!killed && victim != null && t >= killAtNormalizedTime)
+            if (!killed && t >= killAtNormalizedTime)
             {
                 killed = true;
                 victim.OnKilled();
+                if (sfx != null) sfx.PlayFeed();
             }
         });
-        if (victim != null && !killed) victim.OnKilled();
+        if (!killed) victim.OnKilled();
 
         currentVictim = null;
         IsBusy = false;
-        onBite.Invoke(victim != null ? victim.gameObject : null);
+        onBite.Invoke(victim.gameObject);
     }
 
-    // ---------------------------------------------------------------- coffin
+    // ---------------------------------------------------------------- coffins
 
-    CoffinCheckpoint FindCoffin()
+    CoffinCheckpoint FindNearestCoffin(Vector3 from, float range)
     {
         CoffinCheckpoint best = null;
-        float bestDistance = coffinRange;
+        float bestDistance = range;
         foreach (CoffinCheckpoint coffin in CoffinCheckpoint.All)
         {
-            float d = Vector3.Distance(Vector3.ProjectOnPlane(coffin.transform.position, Vector3.up), Vector3.ProjectOnPlane(transform.position, Vector3.up));
+            float d = Vector3.Distance(Vector3.ProjectOnPlane(coffin.transform.position, Vector3.up), Vector3.ProjectOnPlane(from, Vector3.up));
             if (d < bestDistance) { best = coffin; bestDistance = d; }
         }
         return best;
     }
 
-    IEnumerator CheckpointRoutine(CoffinCheckpoint coffin)
+    /// <summary>Lid opens, he floats in and lies down, the lid closes, and he reappears in front in a burst of smoke.</summary>
+    IEnumerator RestInCoffinRoutine(CoffinCheckpoint coffin)
     {
-        IsBusy = true;
-        StopLocomotionAnimation();
-        Vector3 to = Vector3.ProjectOnPlane(coffin.transform.position - transform.position, Vector3.up);
-        if (to.sqrMagnitude > 0.001f) transform.rotation = Quaternion.LookRotation(to);
-
+        BeginSequence();
         coffin.Activate();
-        respawnPosition = coffin.RespawnPosition;
-        respawnRotation = coffin.RespawnRotation;
-        animator.SetTrigger(CheckpointHash);
+        respawnCoffin = coffin;
         onCheckpoint.Invoke(coffin);
 
-        yield return WaitForAction(CoffinState, null);
+        Vector3 toCoffin = Vector3.ProjectOnPlane(coffin.transform.position - transform.position, Vector3.up);
+        if (toCoffin.sqrMagnitude > 0.001f) transform.rotation = Quaternion.LookRotation(toCoffin);
+        yield return coffin.MoveLid(CoffinCheckpoint.LidState.Open, 0.5f);
+
+        yield return FloatTo(coffin.InsidePosition, coffin.InsideRotation, 0.45f, 0.7f);
+
+        animator.Play(LieDownState, 0, 0f);
+        if (sfx != null) sfx.PlayLieDown();
+        yield return WaitForState(LieDownState, 0.98f);
+
+        yield return coffin.MoveLid(CoffinCheckpoint.LidState.Closed, 0.6f);
+        yield return new WaitForSeconds(0.35f);
+
+        SpawnVanishEffect(coffin.transform.position + Vector3.up * 0.5f);
+        if (sfx != null) sfx.PlayVanish();
+        SetVisible(false);
+        yield return new WaitForSeconds(0.25f);
+
+        PlaceAt(coffin.RespawnPosition, coffin.RespawnRotation);
+        animator.Play(IdleState, 0, 0f);
+        SpawnVanishEffect(coffin.RespawnPosition + Vector3.up * 0.9f);
+        if (sfx != null) sfx.PlayAppear();
+        SetVisible(true);
+
+        EndSequence();
+    }
+
+    /// <summary>He lies in the closed coffin, the lid opens, he rises stiffly and floats out in front of it.</summary>
+    IEnumerator EmergeRoutine(CoffinCheckpoint coffin, float delay)
+    {
+        BeginSequence();
+        SetVisible(true);
+        coffin.SetLidImmediate(CoffinCheckpoint.LidState.Closed);
+        PlaceAt(coffin.InsidePosition, coffin.InsideRotation);
+        animator.Play(LieDownState, 0, 1f); // the lying pose
+        animator.speed = 0f;
+        animator.Update(0f);
+        if (viewCamera != null && viewCamera.TryGetComponent(out IsometricCamera iso)) iso.SnapToTarget();
+
+        yield return new WaitForSeconds(delay);
+        yield return coffin.MoveLid(CoffinCheckpoint.LidState.Open, 0.7f);
+
+        animator.speed = 1f;
+        animator.Play(RiseState, 0, 1f); // the lie-down clip played backwards
+        if (sfx != null) sfx.PlayRise();
+        yield return WaitForRise();
+
+        animator.Play(IdleState, 0, 0f);
+        yield return FloatTo(coffin.RespawnPosition, coffin.RespawnRotation, 0.5f, 0.7f);
+
+        EndSequence();
+        onEmerged.Invoke();
+    }
+
+    void BeginSequence()
+    {
+        inSequence = true;
+        IsBusy = true;
+        StopLocomotionAnimation();
+        controller.enabled = false;
+        verticalVelocity = 0f;
+    }
+
+    void EndSequence()
+    {
+        controller.enabled = true;
+        verticalVelocity = -2f;
+        timeSinceGrounded = 0f;
+        airTime = 0f;
+        inSequence = false;
         IsBusy = false;
+    }
+
+    IEnumerator FloatTo(Vector3 position, Quaternion rotation, float duration, float arcHeight)
+    {
+        Vector3 fromPos = transform.position;
+        Quaternion fromRot = transform.rotation;
+        float t = 0f;
+        while (t < 1f)
+        {
+            t += Time.deltaTime / Mathf.Max(0.01f, duration);
+            float k = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t));
+            transform.SetPositionAndRotation(Vector3.Lerp(fromPos, position, k) + Vector3.up * Mathf.Sin(k * Mathf.PI) * arcHeight,
+                                             Quaternion.Slerp(fromRot, rotation, k));
+            yield return null;
+        }
+        transform.SetPositionAndRotation(position, rotation);
+    }
+
+    void PlaceAt(Vector3 position, Quaternion rotation)
+    {
+        bool wasEnabled = controller.enabled;
+        controller.enabled = false;
+        transform.SetPositionAndRotation(position, rotation);
+        controller.enabled = wasEnabled;
+        if (capeCloth != null) capeCloth.ClearTransformMotion();
+    }
+
+    void SetVisible(bool visible)
+    {
+        foreach (Renderer r in visibleRenderers)
+            if (r != null) r.enabled = visible;
+        if (visible && capeCloth != null) capeCloth.ClearTransformMotion();
+    }
+
+    void SpawnVanishEffect(Vector3 position)
+    {
+        if (vanishEffect != null) Instantiate(vanishEffect, position, Quaternion.identity);
     }
 
     // ---------------------------------------------------------------- death
@@ -341,28 +497,38 @@ public class VampireController : MonoBehaviour
         StopAllCoroutines();
         if (currentVictim != null) currentVictim.OnReleased(); // a bite cut short lets the victim escape
         currentVictim = null;
+        if (inSequence) EndSequence();
+        animator.speed = 1f;
+        SetVisible(true);
         IsBusy = false;
         IsDead = true;
         StopLocomotionAnimation();
         animator.SetTrigger(DieHash);
         if (capeCloth != null) capeCloth.externalAcceleration = Vector3.zero;
+        if (sfx != null) sfx.PlayDeath();
         onDeath.Invoke();
     }
 
-    /// <summary>Bring the vampire back at the last coffin he rested in (or where he started).</summary>
+    /// <summary>Bring the vampire back: he rises from the last coffin he rested in.</summary>
     public void Respawn()
     {
         if (!IsDead) return;
-        controller.enabled = false;
-        transform.SetPositionAndRotation(respawnPosition, respawnRotation);
-        controller.enabled = true;
-        if (capeCloth != null) capeCloth.ClearTransformMotion();
-        if (viewCamera != null && viewCamera.TryGetComponent(out IsometricCamera iso)) iso.SnapToTarget();
-        verticalVelocity = 0f;
         IsDead = false;
         animator.ResetTrigger(DieHash);
         animator.SetTrigger(RespawnHash);
         onRespawn.Invoke();
+
+        CoffinCheckpoint coffin = respawnCoffin != null ? respawnCoffin : CoffinCheckpoint.Current;
+        if (coffin != null)
+        {
+            StartCoroutine(EmergeRoutine(coffin, 0.4f));
+        }
+        else
+        {
+            PlaceAt(fallbackRespawnPosition, fallbackRespawnRotation);
+            verticalVelocity = 0f;
+            if (viewCamera != null && viewCamera.TryGetComponent(out IsometricCamera iso)) iso.SnapToTarget();
+        }
     }
 
     // ---------------------------------------------------------------- helpers
@@ -388,6 +554,37 @@ public class VampireController : MonoBehaviour
             yield return null;
         }
         onProgress?.Invoke(1f);
+    }
+
+    /// <summary>Waits until a state started with Animator.Play reaches the given normalized time.</summary>
+    IEnumerator WaitForState(string stateName, float untilNormalizedTime)
+    {
+        yield return null;
+        float safety = 15f;
+        while (safety > 0f)
+        {
+            AnimatorStateInfo info = animator.GetCurrentAnimatorStateInfo(0);
+            if (!info.IsName(stateName) || info.normalizedTime >= untilNormalizedTime) break;
+            safety -= Time.deltaTime;
+            yield return null;
+        }
+    }
+
+    /// <summary>
+    /// The rise plays the lie-down clip backwards. Unity still counts normalized time upward for reversed
+    /// states, so wait for the state's duration instead.
+    /// </summary>
+    IEnumerator WaitForRise()
+    {
+        yield return null;
+        AnimatorStateInfo info = animator.GetCurrentAnimatorStateInfo(0);
+        float duration = info.IsName(RiseState) && info.length > 0f && info.length < 30f ? info.length : 3f;
+        float elapsed = 0f;
+        while (elapsed < duration * 0.97f && animator.GetCurrentAnimatorStateInfo(0).IsName(RiseState))
+        {
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
     }
 
     void OnDrawGizmosSelected()

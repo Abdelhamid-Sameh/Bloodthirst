@@ -28,6 +28,11 @@ public class IsometricCamera : MonoBehaviour
     public float zoomStep = 4f;
     public float zoomSmoothTime = 0.15f;
 
+    [Header("Audio")]
+    [Tooltip("Sound listener kept next to the target, so 3D sounds are heard from the player's spot rather than from the high camera.")]
+    public Transform audioListener;
+    public float listenerHeight = 1.6f;
+
     [Header("Follow")]
     public float followSmoothTime = 0.12f;
     [Tooltip("How far (metres) the view leans toward the mouse cursor.")]
@@ -87,6 +92,7 @@ public class IsometricCamera : MonoBehaviour
         Vector3 desired = target.position + targetOffset + LookAhead();
         focus = Vector3.SmoothDamp(focus, desired, ref focusVelocity, followSmoothTime);
         Place();
+        if (audioListener != null) audioListener.SetPositionAndRotation(target.position + Vector3.up * listenerHeight, Quaternion.Euler(0f, yaw, 0f));
 
         if (cutaway) UpdateCutaway();
     }
