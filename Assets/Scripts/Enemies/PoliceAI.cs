@@ -65,6 +65,11 @@ public class PoliceAI : MonoBehaviour
     Collider vampireCollider;
     LineRenderer tracer;
     Light muzzleFlash;
+    Animator animator;
+    static readonly int SpeedHash = Animator.StringToHash("Speed");
+    static readonly int AimingHash = Animator.StringToHash("Aiming");
+    static readonly int ShootHash = Animator.StringToHash("Shoot");
+    static readonly int DieHash = Animator.StringToHash("Die");
     float tracerHideTime;
 
     bool engaged;
@@ -85,6 +90,17 @@ public class PoliceAI : MonoBehaviour
         ownColliders = GetComponentsInChildren<Collider>(true);
         if (gun == null) gun = transform.Find("Gun");
         BuildEffects();
+        animator = GetComponentInChildren<Animator>();
+    }
+
+    // Feeds the animator: how fast the officer walks, and whether he is aiming his gun.
+    void LateUpdate()
+    {
+        if (animator == null || currentState == State.Dead) return;
+        float speed = 0f;
+        if (agent != null && agent.enabled && agent.isOnNavMesh) speed = agent.velocity.magnitude;
+        animator.SetFloat(SpeedHash, speed, 0.1f, Time.deltaTime);
+        animator.SetBool(AimingHash, currentState == State.Shooting);
     }
 
     void OnEnable() { all.Add(this); }
@@ -371,6 +387,12 @@ public class PoliceAI : MonoBehaviour
         muzzleFlash.transform.position = from;
         muzzleFlash.enabled = true;
         tracerHideTime = Time.time + 0.07f;
+
+        if (animator != null)
+        {
+            animator.ResetTrigger(ShootHash);
+            animator.SetTrigger(ShootHash);
+        }
     }
 
     // ------------------------------------------------------------ bitten / killed
@@ -411,7 +433,8 @@ public class PoliceAI : MonoBehaviour
         if (agent.enabled) agent.enabled = false;
         SetCollidersEnabled(false);
         HideShot();
-        StartCoroutine(Collapse());
+        if (animator != null) animator.SetTrigger(DieHash);
+        else StartCoroutine(Collapse());
     }
 
     // Placeholder until the officers get a death animation: tip the body over backwards.
