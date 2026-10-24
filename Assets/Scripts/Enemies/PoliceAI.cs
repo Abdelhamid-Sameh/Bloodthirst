@@ -62,6 +62,7 @@ public class PoliceAI : MonoBehaviour
     NavMeshAgent agent;
     Collider[] ownColliders;
     VampireHealth vampireHealth;
+    VampireBlood vampireBlood;
     Collider vampireCollider;
     LineRenderer tracer;
     Light muzzleFlash;
@@ -116,6 +117,7 @@ public class PoliceAI : MonoBehaviour
         if (vampire != null)
         {
             vampireHealth = vampire.GetComponent<VampireHealth>();
+            vampireBlood = vampire.GetComponent<VampireBlood>();
             vampireCollider = vampire.GetComponent<Collider>();
             lastVampirePos = vampire.position;
         }
@@ -330,11 +332,12 @@ public class PoliceAI : MonoBehaviour
 
         if (hit)
         {
-            if (vampireHealth != null) vampireHealth.TakeDamage(damage);
+            if (vampireBlood != null) vampireBlood.TakeDamage(damage);
+            else if (vampireHealth != null) vampireHealth.TakeDamage(damage);
             else if (!warnedNoHealth)
             {
                 warnedNoHealth = true;
-                Debug.LogWarning("The vampire has no VampireHealth component, so shots do no damage.", this);
+                Debug.LogWarning("The vampire has no VampireBlood or VampireHealth component, so shots do no damage.", this);
             }
         }
         else
