@@ -168,7 +168,8 @@ public class IsometricCamera : MonoBehaviour
 
     bool IsTallProp(Collider c)
     {
-        if (c.GetComponentInParent<CharacterController>() != null) return false; // never hide characters
+        // Never hide characters (the vampire, humans or police).
+        if (c.GetComponentInParent<CharacterController>() != null || c.GetComponentInParent<UnityEngine.AI.NavMeshAgent>() != null) return false;
         Renderer r = c.GetComponentInChildren<Renderer>();
         if (r == null) r = c.GetComponentInParent<Renderer>();
         return r != null && r.bounds.size.y >= minPropHeight;

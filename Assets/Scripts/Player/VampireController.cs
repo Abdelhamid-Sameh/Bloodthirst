@@ -10,7 +10,7 @@ using UnityEngine.InputSystem;
 /// WASD / arrows : run, relative to the camera (W = up the screen)
 /// Mouse         : when standing still he turns on the spot to face the cursor
 /// Space         : jump
-/// E / left click: bite a human within reach in front of him (does nothing if nobody is in reach)
+/// E / left click: bite a human or police officer within reach in front of him (does nothing if nobody is in reach)
 /// F             : rest in a nearby coffin (saves the checkpoint)
 /// K / R         : debug only - die / rise again from the last coffin
 ///
@@ -79,8 +79,8 @@ public class VampireController : MonoBehaviour
     public bool IsBusy { get; private set; }
     public bool IsRunning { get; private set; }
     public bool IsGrounded => IsGroundedForActions();
-    /// <summary>The human he would bite if E were pressed now, or null.</summary>
-    public HumanAI BiteTargetInReach { get; private set; }
+    /// <summary>The human or officer he would bite if E were pressed now, or null.</summary>
+    public GameObject BiteTargetInReach => biteTarget != null ? biteTarget.GameObject : null;
     /// <summary>The coffin he would rest in if F were pressed now, or null.</summary>
     public CoffinCheckpoint CoffinInReach { get; private set; }
 
@@ -103,7 +103,8 @@ public class VampireController : MonoBehaviour
     bool wasAnimGrounded = true;
     bool turningInPlace;
     bool inSequence;
-    HumanAI currentVictim;
+    BiteTarget biteTarget;
+    BiteTarget currentVictim;
     CoffinCheckpoint respawnCoffin;
     Vector3 fallbackRespawnPosition;
     Quaternion fallbackRespawnRotation;
@@ -143,7 +144,7 @@ public class VampireController : MonoBehaviour
         if (IsDead)
         {
             UpdateGravity(false);
-            BiteTargetInReach = null;
+            biteTarget = null;
             CoffinInReach = null;
             if (debugKeys && kb.rKey.wasPressedThisFrame) Respawn();
             return;
@@ -158,19 +159,19 @@ public class VampireController : MonoBehaviour
         if (IsBusy)
         {
             UpdateGravity(false);
-            BiteTargetInReach = null;
+            biteTarget = null;
             CoffinInReach = null;
             return;
         }
 
         bool grounded = IsGroundedForActions();
-        BiteTargetInReach = grounded ? FindVictim() : null;
+        biteTarget = grounded ? FindVictim() : null;
         CoffinInReach = grounded ? FindNearestCoffin(transform.position, coffinRange) : null;
 
         bool bitePressed = kb.eKey.wasPressedThisFrame || (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame);
-        if (bitePressed && BiteTargetInReach != null)
+        if (bitePressed && biteTarget != null)
         {
-            StartCoroutine(BiteRoutine(BiteTargetInReach));
+            StartCoroutine(BiteRoutine(biteTarget));
             return;
         }
 
@@ -307,35 +308,55 @@ public class VampireController : MonoBehaviour
 
     // ---------------------------------------------------------------- bite
 
-    HumanAI FindVictim()
+    /// <summary>A human (HumanAI) or a police officer (PoliceAI) the vampire can bite.</summary>
+    sealed class BiteTarget
     {
-        HumanAI best = null;
+        readonly HumanAI human;
+        readonly PoliceAI officer;
+        public BiteTarget(HumanAI human) { this.human = human; }
+        public BiteTarget(PoliceAI officer) { this.officer = officer; }
+        public bool IsValid => human != null || officer != null;
+        public Transform Transform => human != null ? human.transform : officer.transform;
+        public GameObject GameObject => Transform.gameObject;
+        public void Capture(Transform biter) { if (human != null) human.OnCaptured(biter); else if (officer != null) officer.OnCaptured(biter); }
+        public void Release() { if (human != null) human.OnReleased(); else if (officer != null) officer.OnReleased(); }
+        public void Kill() { if (human != null) human.OnKilled(); else if (officer != null) officer.Die(); }
+    }
+
+    BiteTarget FindVictim()
+    {
+        BiteTarget best = null;
         float bestDistance = biteRange;
         foreach (HumanAI human in FindObjectsByType<HumanAI>(FindObjectsSortMode.None))
-        {
-            if (!human.CanBeBitten) continue;
-            Vector3 to = Vector3.ProjectOnPlane(human.transform.position - transform.position, Vector3.up);
-            float d = to.magnitude;
-            if (d > bestDistance) continue;
-            if (d > 0.2f && Vector3.Angle(transform.forward, to) > biteAngle * 0.5f) continue;
-            best = human;
-            bestDistance = d;
-        }
+            if (human.CanBeBitten && InBiteReach(human.transform, ref bestDistance)) best = new BiteTarget(human);
+        foreach (PoliceAI officer in FindObjectsByType<PoliceAI>(FindObjectsSortMode.None))
+            if (officer.CanBeBitten && InBiteReach(officer.transform, ref bestDistance)) best = new BiteTarget(officer);
         return best;
     }
 
-    IEnumerator BiteRoutine(HumanAI victim)
+    bool InBiteReach(Transform target, ref float bestDistance)
+    {
+        Vector3 to = Vector3.ProjectOnPlane(target.position - transform.position, Vector3.up);
+        float d = to.magnitude;
+        if (d > bestDistance) return false;
+        if (d > 0.2f && Vector3.Angle(transform.forward, to) > biteAngle * 0.5f) return false;
+        bestDistance = d;
+        return true;
+    }
+
+    IEnumerator BiteRoutine(BiteTarget victim)
     {
         IsBusy = true;
         StopLocomotionAnimation();
 
-        Vector3 to = Vector3.ProjectOnPlane(victim.transform.position - transform.position, Vector3.up);
+        Transform victimTransform = victim.Transform;
+        Vector3 to = Vector3.ProjectOnPlane(victimTransform.position - transform.position, Vector3.up);
         if (to.sqrMagnitude > 0.001f) transform.rotation = Quaternion.LookRotation(to);
-        victim.OnCaptured(transform);
+        victim.Capture(transform);
         currentVictim = victim;
         Vector3 hold = transform.position + transform.forward * victimHoldDistance;
-        hold.y = victim.transform.position.y;
-        victim.transform.position = hold;
+        hold.y = victimTransform.position.y;
+        victimTransform.position = hold;
 
         animator.SetTrigger(BiteHash);
         if (sfx != null) sfx.PlayBite();
@@ -345,15 +366,15 @@ public class VampireController : MonoBehaviour
             if (!killed && t >= killAtNormalizedTime)
             {
                 killed = true;
-                victim.OnKilled();
+                victim.Kill();
                 if (sfx != null) sfx.PlayFeed();
             }
         });
-        if (!killed) victim.OnKilled();
+        if (!killed) victim.Kill();
 
         currentVictim = null;
         IsBusy = false;
-        onBite.Invoke(victim.gameObject);
+        onBite.Invoke(victim.GameObject);
     }
 
     // ---------------------------------------------------------------- coffins
@@ -437,7 +458,7 @@ public class VampireController : MonoBehaviour
         inSequence = true;
         IsBusy = true;
         StopLocomotionAnimation();
-        controller.enabled = false;
+        // The controller stays enabled (it is simply not moved) so the police can still aim at his collider.
         verticalVelocity = 0f;
     }
 
@@ -495,7 +516,7 @@ public class VampireController : MonoBehaviour
     {
         if (IsDead) return;
         StopAllCoroutines();
-        if (currentVictim != null) currentVictim.OnReleased(); // a bite cut short lets the victim escape
+        if (currentVictim != null) currentVictim.Release(); // a bite cut short lets the victim escape
         currentVictim = null;
         if (inSequence) EndSequence();
         animator.speed = 1f;
