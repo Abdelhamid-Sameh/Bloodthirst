@@ -40,6 +40,14 @@ public class PoliceAI : MonoBehaviour
     [Tooltip("When the vampire moves this far away from the spot the officer chose, the officer picks a new spot.")]
     public float repositionDistance = 3f;
 
+    [Header("Health (melee fights)")]
+    [Tooltip("How much damage the officer takes from the vampire's attacks before he dies. A bite always kills instantly.")]
+    public float maxHealth = 40f;
+    [Tooltip("Seconds the officer cannot shoot after being hit.")]
+    public float hitStaggerTime = 0.6f;
+    [Tooltip("How far a hit pushes the officer back.")]
+    public float knockbackDistance = 0.3f;
+
     [Header("Shooting")]
     [Tooltip("Where shots come from. Empty = the child called Gun.")]
     public Transform gun;
@@ -82,6 +90,8 @@ public class PoliceAI : MonoBehaviour
     Vector3 spotVampirePos;
     float repathTimer;
     bool warnedNoHealth;
+    float health = -1f; // -1 = not set yet, becomes maxHealth on the first hit
+    VampireController vampireController;
 
     void Awake()
     {
@@ -119,6 +129,7 @@ public class PoliceAI : MonoBehaviour
             vampireHealth = vampire.GetComponent<VampireHealth>();
             vampireBlood = vampire.GetComponent<VampireBlood>();
             vampireCollider = vampire.GetComponent<Collider>();
+            vampireController = vampire.GetComponent<VampireController>();
             lastVampirePos = vampire.position;
         }
 
@@ -332,6 +343,8 @@ public class PoliceAI : MonoBehaviour
 
         if (hit)
         {
+            // The vampire flinches when a bullet lands (the controller decides if the reaction plays).
+            if (vampireController != null) vampireController.OnHurt();
             if (vampireBlood != null) vampireBlood.TakeDamage(damage);
             else if (vampireHealth != null) vampireHealth.TakeDamage(damage);
             else if (!warnedNoHealth)
@@ -425,6 +438,46 @@ public class PoliceAI : MonoBehaviour
         currentState = agent.isOnNavMesh ? State.Moving : State.Idle;
         hasSpot = false;
     }
+
+/// <summary>Called when the vampire hits this officer in a fight. Hurts him, staggers him, and kills him at 0 health.</summary>
+    public void TakeHit(float amount, Transform attacker)
+    {
+        if (currentState == State.Dead || currentState == State.Captured) return;
+        if (health < 0f) health = maxHealth;
+        health -= amount;
+
+        // Being hit makes the officer notice the vampire even if he was standing still.
+        engaged = true;
+        lastMoveTime = Time.time;
+
+        if (health <= 0f)
+        {
+            Die();
+            return;
+        }
+
+        // Stagger: no shooting for a moment, and a small push away from the attacker.
+        nextFireTime = Mathf.Max(nextFireTime, Time.time + hitStaggerTime);
+        if (attacker != null && agent != null && agent.enabled && agent.isOnNavMesh)
+        {
+            Vector3 push = transform.position - attacker.position;
+            push.y = 0f;
+            if (push.sqrMagnitude > 0.001f) StartCoroutine(Knockback(push.normalized * knockbackDistance));
+        }
+    }
+
+    IEnumerator Knockback(Vector3 total)
+    {
+        const float duration = 0.15f;
+        float t = 0f;
+        while (t < duration && agent != null && agent.enabled && agent.isOnNavMesh)
+        {
+            agent.Move(total * (Time.deltaTime / duration));
+            t += Time.deltaTime;
+            yield return null;
+        }
+    }
+
 
     /// <summary>Called by the vampire when the bite kills this officer.</summary>
     public void Die()

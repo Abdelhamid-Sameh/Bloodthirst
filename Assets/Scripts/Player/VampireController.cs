@@ -11,6 +11,7 @@ using UnityEngine.InputSystem;
 /// Mouse         : when standing still he turns on the spot to face the cursor
 /// Space         : jump
 /// E / left click: bite a human or police officer within reach in front of him (does nothing if nobody is in reach)
+/// Right click / Q: fight - a melee swing that hurts police officers in front of him
 /// F             : rest in a nearby coffin (saves the checkpoint)
 /// K / R         : debug only - die / rise again from the last coffin
 ///
@@ -45,6 +46,36 @@ public class VampireController : MonoBehaviour
     public float victimHoldDistance = 0.75f;
     [Tooltip("Point in the bite animation (0-1) at which the victim dies.")]
     [Range(0, 1)] public float killAtNormalizedTime = 0.7f;
+
+    [Header("Fight (Right click or Q)")]
+    [Tooltip("How far in front of him a swing reaches.")]
+    public float attackRange = 2.5f;
+    [Tooltip("If an officer is this close (in the direction he is aiming), he runs up to him before swinging. 0 = swing on the spot.")]
+    public float attackSeekRange = 6f;
+    [Tooltip("How close he gets to the officer before the combo starts.")]
+    public float fightDistance = 1.1f;
+    [Tooltip("Speed of the dash toward the officer.")]
+    public float lungeSpeed = 9f;
+    [Tooltip("How wide the swing is (degrees, centred on where he faces).")]
+    [Range(0, 360)] public float attackAngle = 120f;
+    [Tooltip("Damage per hit. Police officers have 40 health by default, so 2 hits.")]
+    public float attackDamage = 20f;
+    [Tooltip("Points in the attack animation (0-1) at which a blow lands, in order. The Vampire Fighting combo has strikes at about 0.17, 0.30, 0.47 and 0.58.")]
+    public float[] hitTimes = { 0.17f, 0.30f, 0.47f, 0.58f };
+    [Tooltip("Point in the attack animation (0-1) where he is free to move again. The full combo lasts 4.7 s; 0.68 ends it after the big punch.")]
+    [Range(0, 1)] public float attackEndNormalizedTime = 0.68f;
+    [Tooltip("Seconds he must wait after a swing before he can swing again.")]
+    public float attackCooldown = 0.3f;
+    [Tooltip("Only used while the Animator has no Attack animation yet: how long a swing lasts.")]
+    public float fallbackAttackDuration = 0.6f;
+    [Tooltip("Fires for every officer a swing hits. Hook hit sounds or effects here.")]
+    public UnityEvent<GameObject> onHit = new UnityEvent<GameObject>();
+
+    [Header("Getting hit")]
+    [Tooltip("Minimum seconds between two flinches, so he is not stunned by every bullet.")]
+    public float hitReactionCooldown = 2.5f;
+    [Tooltip("Seconds he cannot move while flinching.")]
+    public float hitStunTime = 0.8f;
 
     [Header("Coffins")]
     public float coffinRange = 2.8f;
@@ -84,7 +115,9 @@ public class VampireController : MonoBehaviour
     /// <summary>The coffin he would rest in if F were pressed now, or null.</summary>
     public CoffinCheckpoint CoffinInReach { get; private set; }
 
-    const string BiteState = "Bite", LieDownState = "Coffin Checkpoint", RiseState = "Coffin Rise", IdleState = "Idle";
+    const string BiteState = "Bite", LieDownState = "Coffin Checkpoint", RiseState = "Coffin Rise", IdleState = "Idle", AttackState = "Attack";
+    static readonly int AttackHash = Animator.StringToHash("Attack");
+    static readonly int HitHash = Animator.StringToHash("Hit");
     static readonly int SpeedHash = Animator.StringToHash("Speed");
     static readonly int TurnHash = Animator.StringToHash("Turn");
     static readonly int GroundedHash = Animator.StringToHash("IsGrounded");
@@ -105,6 +138,10 @@ public class VampireController : MonoBehaviour
     bool inSequence;
     BiteTarget biteTarget;
     BiteTarget currentVictim;
+    float nextAttackTime;
+    bool hasAttackAnim; // true once the Animator has an "Attack" trigger (and state) set up
+    bool hasHitAnim;    // same for the "Hit" (getting hit) reaction
+    float nextHitReactionTime;
     CoffinCheckpoint respawnCoffin;
     Vector3 fallbackRespawnPosition;
     Quaternion fallbackRespawnRotation;
@@ -116,6 +153,12 @@ public class VampireController : MonoBehaviour
         animator = GetComponent<Animator>();
         sfx = GetComponent<VampireAudio>();
         animator.applyRootMotion = false;
+        foreach (AnimatorControllerParameter p in animator.parameters)
+            {
+                if (p.type != AnimatorControllerParameterType.Trigger) continue;
+                if (p.name == "Attack") hasAttackAnim = true;
+                if (p.name == "Hit") hasHitAnim = true;
+            }
         if (viewCamera == null) viewCamera = Camera.main;
         fallbackRespawnPosition = transform.position;
         fallbackRespawnRotation = transform.rotation;
@@ -172,6 +215,13 @@ public class VampireController : MonoBehaviour
         if (bitePressed && biteTarget != null)
         {
             StartCoroutine(BiteRoutine(biteTarget));
+            return;
+        }
+
+        bool attackPressed = kb.qKey.wasPressedThisFrame || (Mouse.current != null && Mouse.current.rightButton.wasPressedThisFrame);
+        if (attackPressed && grounded && Time.time >= nextAttackTime)
+        {
+            StartCoroutine(AttackRoutine());
             return;
         }
 
@@ -377,6 +427,146 @@ public class VampireController : MonoBehaviour
         onBite.Invoke(victim.GameObject);
     }
 
+// ---------------------------------------------------------------- fight
+
+    /// <summary>A melee swing: turns toward the cursor, plays the attack animation, and hurts officers in front of him.</summary>
+IEnumerator AttackRoutine()
+    {
+        IsBusy = true;
+        StopLocomotionAnimation();
+
+        // Where the player is pointing.
+        Vector3 aimDir = transform.forward;
+        if (TryGetCursorPoint(out Vector3 cursor))
+        {
+            Vector3 toCursor = Vector3.ProjectOnPlane(cursor - transform.position, Vector3.up);
+            if (toCursor.sqrMagnitude > 0.25f)
+            {
+                aimDir = toCursor.normalized;
+                transform.rotation = Quaternion.LookRotation(aimDir);
+            }
+        }
+
+        // Close in on the nearest officer first, so the fight happens at arm's length.
+        PoliceAI target = FindFightTarget(aimDir);
+        if (target != null) yield return ApproachTarget(target);
+
+        if (hasAttackAnim)
+        {
+            // The fighting animation is a combo: every point in hitTimes lands a blow.
+            int nextHit = 0;
+            animator.ResetTrigger(AttackHash);
+            animator.SetTrigger(AttackHash);
+            yield return WaitForAction(AttackState, t =>
+            {
+                // Keep facing the officer while he is pushed around by the blows.
+                if (target != null && target.CanBeBitten) FaceFlat(target.transform.position, runTurnSpeed);
+                while (hitTimes != null && nextHit < hitTimes.Length && t >= hitTimes[nextHit])
+                {
+                    nextHit++;
+                    DealAttackDamage();
+                }
+            }, attackEndNormalizedTime);
+        }
+        else
+        {
+            // No animation set up: one blow in the middle of a short pause.
+            yield return new WaitForSeconds(fallbackAttackDuration * 0.5f);
+            DealAttackDamage();
+            yield return new WaitForSeconds(fallbackAttackDuration * 0.5f);
+        }
+
+        nextAttackTime = Time.time + attackCooldown;
+        IsBusy = false;
+    }
+
+    /// <summary>Hurts every living officer inside the swing's range and arc.</summary>
+    void DealAttackDamage()
+    {
+        foreach (PoliceAI officer in FindObjectsByType<PoliceAI>(FindObjectsSortMode.None))
+        {
+            if (!officer.CanBeBitten) continue; // dead or already grabbed
+            Vector3 to = Vector3.ProjectOnPlane(officer.transform.position - transform.position, Vector3.up);
+            if (to.magnitude > attackRange) continue;
+            if (to.magnitude > 0.2f && Vector3.Angle(transform.forward, to) > attackAngle * 0.5f) continue;
+            officer.TakeHit(attackDamage, transform);
+            onHit.Invoke(officer.gameObject);
+        }
+    }
+
+/// <summary>The nearest living officer within attackSeekRange, in the direction he is aiming (or null).</summary>
+    PoliceAI FindFightTarget(Vector3 aimDir)
+    {
+        if (attackSeekRange <= 0f) return null;
+        PoliceAI best = null;
+        float bestDist = attackSeekRange;
+        foreach (PoliceAI officer in FindObjectsByType<PoliceAI>(FindObjectsSortMode.None))
+        {
+            if (!officer.CanBeBitten) continue; // dead or already grabbed
+            Vector3 to = Vector3.ProjectOnPlane(officer.transform.position - transform.position, Vector3.up);
+            float d = to.magnitude;
+            if (d >= bestDist) continue;
+            if (d > 0.2f && Vector3.Angle(aimDir, to) > 100f) continue;
+            best = officer;
+            bestDist = d;
+        }
+        return best;
+    }
+
+    /// <summary>Runs up to the officer and stops fightDistance away from him, facing him.</summary>
+    IEnumerator ApproachTarget(PoliceAI target)
+    {
+        float timeout = 1.5f;
+        animator.SetFloat(SpeedHash, 1f); // run animation while closing in
+        while (timeout > 0f && target != null && target.CanBeBitten)
+        {
+            Vector3 to = Vector3.ProjectOnPlane(target.transform.position - transform.position, Vector3.up);
+            float dist = to.magnitude;
+            if (dist <= fightDistance) break;
+            FaceFlat(target.transform.position, runTurnSpeed);
+            float step = Mathf.Min(lungeSpeed * Time.deltaTime, dist - fightDistance);
+            controller.Move((to / dist) * step);
+            timeout -= Time.deltaTime;
+            yield return null;
+        }
+        animator.SetFloat(SpeedHash, 0f);
+
+        if (target != null)
+        {
+            Vector3 face = Vector3.ProjectOnPlane(target.transform.position - transform.position, Vector3.up);
+            if (face.sqrMagnitude > 0.0001f) transform.rotation = Quaternion.LookRotation(face);
+        }
+    }
+
+    void FaceFlat(Vector3 worldPos, float degreesPerSecond)
+    {
+        Vector3 to = Vector3.ProjectOnPlane(worldPos - transform.position, Vector3.up);
+        if (to.sqrMagnitude < 0.0001f) return;
+        transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(to), degreesPerSecond * Time.deltaTime);
+    }
+
+
+/// <summary>Called when something hurts him (a police bullet). He flinches, but not more often than hitReactionCooldown.</summary>
+    public void OnHurt()
+    {
+        if (!hasHitAnim || IsDead || IsBusy || inSequence || !IsGroundedForActions()) return;
+        if (Time.time < nextHitReactionTime) return;
+        StartCoroutine(HitReactionRoutine());
+    }
+
+    IEnumerator HitReactionRoutine()
+    {
+        nextHitReactionTime = Time.time + hitReactionCooldown;
+        IsBusy = true;
+        StopLocomotionAnimation();
+        animator.ResetTrigger(HitHash);
+        animator.SetTrigger(HitHash);
+        yield return new WaitForSeconds(hitStunTime);
+        IsBusy = false;
+    }
+
+
+
     // ---------------------------------------------------------------- coffins
 
     CoffinCheckpoint FindNearestCoffin(Vector3 from, float range)
@@ -524,6 +714,8 @@ public class VampireController : MonoBehaviour
         IsBusy = false;
         IsDead = true;
         StopLocomotionAnimation();
+        if (hasAttackAnim) animator.ResetTrigger(AttackHash);
+        if (hasHitAnim) animator.ResetTrigger(HitHash);
         animator.SetTrigger(DieHash);
         if (capeCloth != null) capeCloth.externalAcceleration = Vector3.zero;
         if (sfx != null) sfx.PlayDeath();
@@ -555,7 +747,7 @@ public class VampireController : MonoBehaviour
     // ---------------------------------------------------------------- helpers
 
     /// <summary>Waits until the given animator state has played (or a safety timeout), reporting its progress 0-1.</summary>
-    IEnumerator WaitForAction(string stateName, System.Action<float> onProgress)
+IEnumerator WaitForAction(string stateName, System.Action<float> onProgress, float endAt = 0.92f)
     {
         float waited = 0f;
         while (waited < 0.75f && !animator.GetCurrentAnimatorStateInfo(0).IsName(stateName))
@@ -570,7 +762,7 @@ public class VampireController : MonoBehaviour
             AnimatorStateInfo info = animator.GetCurrentAnimatorStateInfo(0);
             if (!info.IsName(stateName)) break;
             onProgress?.Invoke(info.normalizedTime);
-            if (info.normalizedTime >= 0.92f) break;
+            if (info.normalizedTime >= endAt) break;
             safety -= Time.deltaTime;
             yield return null;
         }
@@ -614,5 +806,7 @@ public class VampireController : MonoBehaviour
         Gizmos.DrawWireSphere(transform.position, biteRange);
         Gizmos.color = new Color(0.6f, 0f, 1f, 0.6f);
         Gizmos.DrawWireSphere(transform.position, coffinRange);
+        Gizmos.color = new Color(1f, 0.5f, 0f, 0.6f);
+        Gizmos.DrawWireSphere(transform.position, attackRange);
     }
 }

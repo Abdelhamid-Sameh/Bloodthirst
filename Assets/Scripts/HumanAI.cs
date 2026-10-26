@@ -23,10 +23,21 @@ public class HumanAI : MonoBehaviour
     [Range(0, 360)] public float fieldOfViewAngle = 110f;
     [Tooltip("Layers that block this human's sight (buildings, walls, cars). Never include the Player layer.")]
     public LayerMask obstacleMask = 1; // Default layer
-    public float detectionDelay = 5.0f;
+    [Tooltip("Short reaction time (seconds) between spotting the vampire and starting to run.")]
+    public float detectionDelay = 0.25f;
+    [Tooltip("Inside this distance the human senses the vampire even outside the field of view (behind/side), and reacts instantly.")]
+    public float closeAwarenessRadius = 4f;
     [Tooltip("Height of the eyes, and of the point on the vampire they look at.")]
     public float eyeHeight = 1.6f;
     public float targetHeight = 1.0f;
+
+    [Header("Health (melee fights)")]
+    [Tooltip("How much damage the human takes from the vampire's attacks before he dies. A bite always kills.")]
+    public float maxHealth = 40f;
+    [Tooltip("Seconds a human stays dazed in place after being hit, before he runs.")]
+    public float hitStunTime = 1.2f;
+    [Tooltip("How far a hit pushes the human back.")]
+    public float knockbackDistance = 0.3f;
 
     [Header("Wander/Idle Timing")]
     public float wanderRadius = 10f;
@@ -38,6 +49,7 @@ public class HumanAI : MonoBehaviour
     
     private float fleeRepathTimer;
 private float stateTimer;
+    private float health = -1f; // -1 = not set yet, becomes maxHealth on the first hit
 
     /// <summary>False once the vampire has killed this human.</summary>
     public bool IsAlive => currentState != State.Dead;
@@ -145,7 +157,7 @@ private float stateTimer;
         }
     }
 
-    private bool CheckLineOfSight()
+private bool CheckLineOfSight()
     {
         if (vampirePlayer == null) return false;
 
@@ -154,8 +166,10 @@ private float stateTimer;
 
         if (distanceToPlayer <= detectionRadius)
         {
+            // Very close: the human notices the vampire even if he is behind or beside them.
+            bool inCloseRange = distanceToPlayer <= closeAwarenessRadius;
             float angle = Vector3.Angle(transform.forward, directionToPlayer);
-            if (angle <= fieldOfViewAngle / 2f)
+            if (inCloseRange || angle <= fieldOfViewAngle / 2f)
             {
                 // Eye to body: the ray must not end inside the floor, and walls on obstacleMask block it.
                 Vector3 eye = transform.position + Vector3.up * eyeHeight;
@@ -172,17 +186,23 @@ private float stateTimer;
         return false;
     }
 
-    private IEnumerator AlertAndFleeSequence()
+private IEnumerator AlertAndFleeSequence()
     {
         currentState = State.Alerted;
         agent.isStopped = true;
         agent.velocity = Vector3.zero;
 
-        // Wait before running
-        yield return new WaitForSeconds(detectionDelay);
+        // Brief reaction time. If the vampire is already close, run immediately.
+        bool vampireClose = vampirePlayer != null &&
+            Vector3.Distance(transform.position, vampirePlayer.position) <= closeAwarenessRadius;
+        if (!vampireClose && detectionDelay > 0f)
+        {
+            yield return new WaitForSeconds(detectionDelay);
+        }
 
         // Transition to Fleeing
         currentState = State.Fleeing;
+        fleeRepathTimer = 0f; // pick a flee path right away
         agent.speed = fleeSpeed;
         agent.isStopped = false; // Ensure agent is explicitly un-paused
     }
@@ -267,15 +287,103 @@ private void HandleFleeing()
         }
     }
 
+/// <summary>Called when the vampire hits this human in a fight. Hurts him, shoves him back and leaves him dazed; kills him at 0 health.</summary>
+    public void TakeHit(float amount, Transform attacker)
+    {
+        if (currentState == State.Dead || currentState == State.Captured) return;
+        if (health < 0f) health = maxHealth;
+        health -= amount;
+
+        Vector3 away = Vector3.zero;
+        if (attacker != null)
+        {
+            away = transform.position - attacker.position;
+            away.y = 0f;
+        }
+
+        if (health <= 0f)
+        {
+            // Face the attacker so a "falls backwards" death animation falls away from him.
+            if (away.sqrMagnitude > 0.001f) transform.rotation = Quaternion.LookRotation(-away);
+            OnKilled();
+            return;
+        }
+
+        // Hurt but alive: dazed in place for a moment (so the rest of the combo can land), then he runs.
+        FreezeInFear(hitStunTime);
+        if (away.sqrMagnitude > 0.001f) StartCoroutine(Knockback(away.normalized * knockbackDistance));
+    }
+
+    /// <summary>Holds the human in place, terrified, for a few seconds before he runs. Used while the vampire closes in for a fight.</summary>
+    public void FreezeInFear(float seconds)
+    {
+        if (currentState == State.Dead || currentState == State.Captured) return;
+        StopAllCoroutines();
+        if (agent.enabled && agent.isOnNavMesh)
+        {
+            agent.isStopped = true;
+            agent.velocity = Vector3.zero;
+        }
+        currentState = State.Alerted;
+        StartCoroutine(FleeAfter(seconds));
+    }
+
+    private IEnumerator FleeAfter(float seconds)
+    {
+        yield return new WaitForSeconds(seconds);
+        if (currentState != State.Alerted || !agent.enabled || !agent.isOnNavMesh) yield break;
+        currentState = State.Fleeing;
+        fleeRepathTimer = 0f; // pick a flee path right away
+        agent.speed = fleeSpeed;
+        agent.isStopped = false;
+    }
+
+    private IEnumerator Knockback(Vector3 total)
+    {
+        const float duration = 0.15f;
+        float t = 0f;
+        while (t < duration && agent != null && agent.enabled && agent.isOnNavMesh)
+        {
+            agent.Move(total * (Time.deltaTime / duration));
+            t += Time.deltaTime;
+            yield return null;
+        }
+    }
+
+
     /// <summary>Called by the vampire when the bite kills this human.</summary>
-    public void OnKilled()
+public void OnKilled()
     {
         if (currentState == State.Dead) return;
         StopAllCoroutines();
         currentState = State.Dead;
         agent.enabled = false;
-        StartCoroutine(Collapse());
+
+        if (HasAnimatorParameter("Die"))
+        {
+            // Play the character's real death animation (it stays on its last frame, lying on the ground).
+            animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+            animator.SetFloat("Speed", 0f);
+            animator.ResetTrigger("Die");
+            animator.SetTrigger("Die");
+        }
+        else
+        {
+            // Controller has no death state: fall back to the old tip-over.
+            StartCoroutine(Collapse());
+        }
     }
+
+private bool HasAnimatorParameter(string paramName)
+    {
+        if (animator == null || animator.runtimeAnimatorController == null) return false;
+        foreach (AnimatorControllerParameter p in animator.parameters)
+        {
+            if (p.name == paramName && p.type == AnimatorControllerParameterType.Trigger) return true;
+        }
+        return false;
+    }
+
 
     // Placeholder until the humans get a death animation: freeze the pose and tip the body over backwards.
     private IEnumerator Collapse()
