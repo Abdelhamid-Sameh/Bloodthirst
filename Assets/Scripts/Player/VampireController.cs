@@ -11,7 +11,7 @@ using UnityEngine.InputSystem;
 /// Mouse         : when standing still he turns on the spot to face the cursor
 /// Space         : jump
 /// E / left click: bite a human or police officer within reach in front of him (does nothing if nobody is in reach)
-/// Right click / Q: fight - a melee swing that hurts police officers in front of him
+/// Right click / Q: fight - a melee combo that hurts police officers and humans in front of him (it never kills; the bite does)
 /// F             : rest in a nearby coffin (saves the checkpoint)
 /// K / R         : debug only - die / rise again from the last coffin
 ///
@@ -58,7 +58,7 @@ public class VampireController : MonoBehaviour
     public float lungeSpeed = 9f;
     [Tooltip("How wide the swing is (degrees, centred on where he faces).")]
     [Range(0, 360)] public float attackAngle = 120f;
-    [Tooltip("Damage per hit. Police officers have 40 health by default, so 2 hits.")]
+    [Tooltip("Damage per hit. Humans and police have 40 health by default. Hits wear health down but never kill; a bite does (police only once weakened).")]
     public float attackDamage = 20f;
     [Tooltip("Points in the attack animation (0-1) at which a blow lands, in order. The Vampire Fighting combo has strikes at about 0.17, 0.30, 0.47 and 0.58.")]
     public float[] hitTimes = { 0.17f, 0.30f, 0.47f, 0.58f };
@@ -447,8 +447,10 @@ IEnumerator AttackRoutine()
             }
         }
 
-        // Close in on the nearest officer first, so the fight happens at arm's length.
-        PoliceAI target = FindFightTarget(aimDir);
+        // Close in on the nearest human or officer first, so the fight happens at arm's length.
+        Component target = FindFightTarget(aimDir);
+        HumanAI humanTarget = target as HumanAI;
+        if (humanTarget != null) humanTarget.FreezeInFear(2.5f); // terrified: he does not run off while the vampire closes in
         if (target != null) yield return ApproachTarget(target);
 
         if (hasAttackAnim)
@@ -459,8 +461,8 @@ IEnumerator AttackRoutine()
             animator.SetTrigger(AttackHash);
             yield return WaitForAction(AttackState, t =>
             {
-                // Keep facing the officer while he is pushed around by the blows.
-                if (target != null && target.CanBeBitten) FaceFlat(target.transform.position, runTurnSpeed);
+                // Keep facing the target while he is pushed around by the blows.
+                if (CanFight(target)) FaceFlat(target.transform.position, runTurnSpeed);
                 while (hitTimes != null && nextHit < hitTimes.Length && t >= hitTimes[nextHit])
                 {
                     nextHit++;
@@ -481,44 +483,70 @@ IEnumerator AttackRoutine()
     }
 
     /// <summary>Hurts every living officer inside the swing's range and arc.</summary>
-    void DealAttackDamage()
+void DealAttackDamage()
     {
         foreach (PoliceAI officer in FindObjectsByType<PoliceAI>(FindObjectsSortMode.None))
         {
-            if (!officer.CanBeBitten) continue; // dead or already grabbed
-            Vector3 to = Vector3.ProjectOnPlane(officer.transform.position - transform.position, Vector3.up);
-            if (to.magnitude > attackRange) continue;
-            if (to.magnitude > 0.2f && Vector3.Angle(transform.forward, to) > attackAngle * 0.5f) continue;
+            if (!officer.CanBeHit || !InSwing(officer.transform)) continue;
             officer.TakeHit(attackDamage, transform);
             onHit.Invoke(officer.gameObject);
         }
+        foreach (HumanAI human in FindObjectsByType<HumanAI>(FindObjectsSortMode.None))
+        {
+            if (!human.CanBeHit || !InSwing(human.transform)) continue;
+            human.TakeHit(attackDamage, transform);
+            onHit.Invoke(human.gameObject);
+        }
+    }
+
+    /// <summary>True if the thing is inside the swing's range and arc.</summary>
+    bool InSwing(Transform t)
+    {
+        Vector3 to = Vector3.ProjectOnPlane(t.position - transform.position, Vector3.up);
+        float d = to.magnitude;
+        if (d > attackRange) return false;
+        return d <= 0.2f || Vector3.Angle(transform.forward, to) <= attackAngle * 0.5f;
+    }
+
+    /// <summary>True while a human or officer can still be fought (not dead, not grabbed).</summary>
+    static bool CanFight(Component c)
+    {
+        if (c == null) return false;
+        PoliceAI officer = c as PoliceAI;
+        if (officer != null) return officer.CanBeHit;
+        HumanAI human = c as HumanAI;
+        return human != null && human.CanBeHit;
+    }
+
+    void ConsiderTarget(Component c, Vector3 aimDir, ref Component best, ref float bestDist)
+    {
+        Vector3 to = Vector3.ProjectOnPlane(c.transform.position - transform.position, Vector3.up);
+        float d = to.magnitude;
+        if (d >= bestDist) return;
+        if (d > 0.2f && Vector3.Angle(aimDir, to) > 100f) return;
+        best = c;
+        bestDist = d;
     }
 
 /// <summary>The nearest living officer within attackSeekRange, in the direction he is aiming (or null).</summary>
-    PoliceAI FindFightTarget(Vector3 aimDir)
+Component FindFightTarget(Vector3 aimDir)
     {
         if (attackSeekRange <= 0f) return null;
-        PoliceAI best = null;
+        Component best = null;
         float bestDist = attackSeekRange;
         foreach (PoliceAI officer in FindObjectsByType<PoliceAI>(FindObjectsSortMode.None))
-        {
-            if (!officer.CanBeBitten) continue; // dead or already grabbed
-            Vector3 to = Vector3.ProjectOnPlane(officer.transform.position - transform.position, Vector3.up);
-            float d = to.magnitude;
-            if (d >= bestDist) continue;
-            if (d > 0.2f && Vector3.Angle(aimDir, to) > 100f) continue;
-            best = officer;
-            bestDist = d;
-        }
+            if (officer.CanBeHit) ConsiderTarget(officer, aimDir, ref best, ref bestDist);
+        foreach (HumanAI human in FindObjectsByType<HumanAI>(FindObjectsSortMode.None))
+            if (human.CanBeHit) ConsiderTarget(human, aimDir, ref best, ref bestDist);
         return best;
     }
 
     /// <summary>Runs up to the officer and stops fightDistance away from him, facing him.</summary>
-    IEnumerator ApproachTarget(PoliceAI target)
+IEnumerator ApproachTarget(Component target)
     {
         float timeout = 1.5f;
         animator.SetFloat(SpeedHash, 1f); // run animation while closing in
-        while (timeout > 0f && target != null && target.CanBeBitten)
+        while (timeout > 0f && CanFight(target))
         {
             Vector3 to = Vector3.ProjectOnPlane(target.transform.position - transform.position, Vector3.up);
             float dist = to.magnitude;

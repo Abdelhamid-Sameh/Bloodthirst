@@ -41,8 +41,10 @@ public class PoliceAI : MonoBehaviour
     public float repositionDistance = 3f;
 
     [Header("Health (melee fights)")]
-    [Tooltip("How much damage the officer takes from the vampire's attacks before he dies. A bite always kills instantly.")]
+    [Tooltip("The officer's health. The vampire's fight attacks wear it down but never take it to 0 - only a bite kills him.")]
     public float maxHealth = 40f;
+    [Tooltip("The vampire can only bite this officer once his health is at or below this fraction of maxHealth (0.4 = 40%). Weaken him with the fight first. 1 = can always be bitten.")]
+    [Range(0f, 1f)] public float biteHealthFraction = 0.4f;
     [Tooltip("Seconds the officer cannot shoot after being hit.")]
     public float hitStaggerTime = 0.6f;
     [Tooltip("How far a hit pushes the officer back.")]
@@ -64,8 +66,14 @@ public class PoliceAI : MonoBehaviour
 
     /// <summary>False once the officer is dead.</summary>
     public bool IsAlive => currentState != State.Dead;
-    /// <summary>True if the vampire is allowed to grab this officer.</summary>
-    public bool CanBeBitten => currentState != State.Captured && currentState != State.Dead;
+    /// <summary>True if the vampire can hit this officer in a fight: not dead and not already grabbed.</summary>
+    public bool CanBeHit => currentState != State.Captured && currentState != State.Dead;
+    /// <summary>Health as a fraction of maxHealth (1 = untouched).</summary>
+    public float HealthFraction => health < 0f ? 1f : Mathf.Clamp01(health / Mathf.Max(maxHealth, 0.01f));
+    /// <summary>True once the fight has worn him down far enough for a bite to finish him.</summary>
+    public bool IsWeakEnoughToBite => HealthFraction <= biteHealthFraction;
+    /// <summary>True if the vampire is allowed to grab and bite this officer: not dead, not grabbed, and weakened enough.</summary>
+    public bool CanBeBitten => CanBeHit && IsWeakEnoughToBite;
 
     NavMeshAgent agent;
     Collider[] ownColliders;
@@ -439,22 +447,18 @@ public class PoliceAI : MonoBehaviour
         hasSpot = false;
     }
 
-/// <summary>Called when the vampire hits this officer in a fight. Hurts him, staggers him, and kills him at 0 health.</summary>
-    public void TakeHit(float amount, Transform attacker)
+/// <summary>Called when the vampire hits this officer in a fight. Wears his health down (never to 0 - only a bite kills him), staggers him and shoves him back.</summary>
+public void TakeHit(float amount, Transform attacker)
     {
         if (currentState == State.Dead || currentState == State.Captured) return;
         if (health < 0f) health = maxHealth;
-        health -= amount;
+
+        // A hit never kills: it only wears him down, and always leaves a little health.
+        health = Mathf.Max(health - amount, Mathf.Min(1f, maxHealth));
 
         // Being hit makes the officer notice the vampire even if he was standing still.
         engaged = true;
         lastMoveTime = Time.time;
-
-        if (health <= 0f)
-        {
-            Die();
-            return;
-        }
 
         // Stagger: no shooting for a moment, and a small push away from the attacker.
         nextFireTime = Mathf.Max(nextFireTime, Time.time + hitStaggerTime);

@@ -32,7 +32,7 @@ public class HumanAI : MonoBehaviour
     public float targetHeight = 1.0f;
 
     [Header("Health (melee fights)")]
-    [Tooltip("How much damage the human takes from the vampire's attacks before he dies. A bite always kills.")]
+    [Tooltip("The human's health. The vampire's fight attacks wear it down but never take it to 0 - only a bite kills him.")]
     public float maxHealth = 40f;
     [Tooltip("Seconds a human stays dazed in place after being hit, before he runs.")]
     public float hitStunTime = 1.2f;
@@ -55,6 +55,8 @@ private float stateTimer;
     public bool IsAlive => currentState != State.Dead;
     /// <summary>True if the vampire is allowed to grab this human.</summary>
     public bool CanBeBitten => currentState != State.Captured && currentState != State.Dead;
+    /// <summary>True if the vampire can hit this human in a fight.</summary>
+    public bool CanBeHit => CanBeBitten;
 
     private void Awake()
     {
@@ -287,12 +289,14 @@ private void HandleFleeing()
         }
     }
 
-/// <summary>Called when the vampire hits this human in a fight. Hurts him, shoves him back and leaves him dazed; kills him at 0 health.</summary>
-    public void TakeHit(float amount, Transform attacker)
+/// <summary>Called when the vampire hits this human in a fight. Wears his health down (never to 0 - only a bite kills him), shoves him back and leaves him dazed.</summary>
+public void TakeHit(float amount, Transform attacker)
     {
         if (currentState == State.Dead || currentState == State.Captured) return;
         if (health < 0f) health = maxHealth;
-        health -= amount;
+
+        // A hit never kills: it only wears him down, and always leaves a little health.
+        health = Mathf.Max(health - amount, Mathf.Min(1f, maxHealth));
 
         Vector3 away = Vector3.zero;
         if (attacker != null)
@@ -301,15 +305,7 @@ private void HandleFleeing()
             away.y = 0f;
         }
 
-        if (health <= 0f)
-        {
-            // Face the attacker so a "falls backwards" death animation falls away from him.
-            if (away.sqrMagnitude > 0.001f) transform.rotation = Quaternion.LookRotation(-away);
-            OnKilled();
-            return;
-        }
-
-        // Hurt but alive: dazed in place for a moment (so the rest of the combo can land), then he runs.
+        // Dazed in place for a moment (so the rest of the combo can land), then he runs.
         FreezeInFear(hitStunTime);
         if (away.sqrMagnitude > 0.001f) StartCoroutine(Knockback(away.normalized * knockbackDistance));
     }
