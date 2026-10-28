@@ -1,0 +1,2417 @@
+fileFormatVersion: 2
+guid: 838a91bc53a31ee45bd5a89801097aee
+TextureImporter:
+  internalIDToNameTable: []
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 0
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 16384
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: batwing_00
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 682bfd78aaca9f9a0800000000000000
+      internalID: -6198733563674774906
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_01
+      rect:
+        serializedVersion: 2
+        x: 145
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1e1d4c9b7ecf667a0800000000000000
+      internalID: -6384137349566770719
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_02
+      rect:
+        serializedVersion: 2
+        x: 290
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2bfdc706eb8126190800000000000000
+      internalID: -7970781184550707278
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_03
+      rect:
+        serializedVersion: 2
+        x: 435
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 012181aa11bc81e50800000000000000
+      internalID: 6780392515734868496
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_04
+      rect:
+        serializedVersion: 2
+        x: 580
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 62e8368dedfd94710800000000000000
+      internalID: 1678118484378357286
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_05
+      rect:
+        serializedVersion: 2
+        x: 725
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d67b4344b60c7f920800000000000000
+      internalID: 3024097241740916589
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_06
+      rect:
+        serializedVersion: 2
+        x: 870
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9d80d4890c4eb2950800000000000000
+      internalID: 6425480809214183641
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_07
+      rect:
+        serializedVersion: 2
+        x: 1015
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 217aff450e0971e80800000000000000
+      internalID: -8207932502686324974
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_08
+      rect:
+        serializedVersion: 2
+        x: 1160
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8f12d0383272a8ce0800000000000000
+      internalID: -1402265300496473608
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_09
+      rect:
+        serializedVersion: 2
+        x: 1305
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: bbf9cc2ffbc799ec0800000000000000
+      internalID: -3559676866605572165
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_10
+      rect:
+        serializedVersion: 2
+        x: 1450
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8b78f2cc90976c0c0800000000000000
+      internalID: -4555820890051344456
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_11
+      rect:
+        serializedVersion: 2
+        x: 1595
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8def82eb36c086580800000000000000
+      internalID: -8833797046555574568
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_12
+      rect:
+        serializedVersion: 2
+        x: 1740
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 443344ef0ef2018a0800000000000000
+      internalID: -6336512032325225660
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_13
+      rect:
+        serializedVersion: 2
+        x: 1885
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 19748c5426a3a7d50800000000000000
+      internalID: 6735760386437957521
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_14
+      rect:
+        serializedVersion: 2
+        x: 2030
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 138943e8139913ed0800000000000000
+      internalID: -2435997485312468943
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_15
+      rect:
+        serializedVersion: 2
+        x: 2175
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0610fdd0b0771a590800000000000000
+      internalID: -7664714201446809248
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_16
+      rect:
+        serializedVersion: 2
+        x: 2320
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: cb7f2e676dd78e740800000000000000
+      internalID: 5181529731360815036
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_17
+      rect:
+        serializedVersion: 2
+        x: 2465
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3d475a1cf5af18ff0800000000000000
+      internalID: -35472032864570157
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_18
+      rect:
+        serializedVersion: 2
+        x: 2610
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4be2804beb6d4bb40800000000000000
+      internalID: 5455221163205078708
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_19
+      rect:
+        serializedVersion: 2
+        x: 2755
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2741804f5ac9a7f40800000000000000
+      internalID: 5727062112732714098
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_20
+      rect:
+        serializedVersion: 2
+        x: 2900
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 16b9f86e9deff3d00800000000000000
+      internalID: 954761857855363937
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_21
+      rect:
+        serializedVersion: 2
+        x: 3045
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 60f57a99d75df5820800000000000000
+      internalID: 2909278619730140934
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_22
+      rect:
+        serializedVersion: 2
+        x: 3190
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0d5bf75de42b87dc0800000000000000
+      internalID: -3640964247069936176
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_23
+      rect:
+        serializedVersion: 2
+        x: 3335
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 49c1a3f2287b5ce00800000000000000
+      internalID: 1064458656708959380
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_24
+      rect:
+        serializedVersion: 2
+        x: 3480
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 444ebbfd740be27d0800000000000000
+      internalID: -2941219683883555772
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_25
+      rect:
+        serializedVersion: 2
+        x: 3625
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 74aad6661f32f1e50800000000000000
+      internalID: 6782179083555809863
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_26
+      rect:
+        serializedVersion: 2
+        x: 3770
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 57122d96672592a10800000000000000
+      internalID: 1885128587566260597
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_27
+      rect:
+        serializedVersion: 2
+        x: 3915
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 088d617937c1ab730800000000000000
+      internalID: 4015553300535892096
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_28
+      rect:
+        serializedVersion: 2
+        x: 4060
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a3d13b259d5d35130800000000000000
+      internalID: 3554419660297542970
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_29
+      rect:
+        serializedVersion: 2
+        x: 4205
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: bb1dd417b362f6a70800000000000000
+      internalID: 8822312231787942331
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_30
+      rect:
+        serializedVersion: 2
+        x: 4350
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6c3307600bbf5a6a0800000000000000
+      internalID: -6438463358815423546
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_31
+      rect:
+        serializedVersion: 2
+        x: 4495
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 179f37997c3a8f1c0800000000000000
+      internalID: -4469642552496883343
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_32
+      rect:
+        serializedVersion: 2
+        x: 4640
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 179ae4e82becf5480800000000000000
+      internalID: -8908174271628531343
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_33
+      rect:
+        serializedVersion: 2
+        x: 4785
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: bcfbbfc40e42fe990800000000000000
+      internalID: -7354619120689889333
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_34
+      rect:
+        serializedVersion: 2
+        x: 4930
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a6411fc558ec38980800000000000000
+      internalID: -8537753396379052950
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_35
+      rect:
+        serializedVersion: 2
+        x: 5075
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: caf4e2c0e76ab6c60800000000000000
+      internalID: 7812521038904709036
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_36
+      rect:
+        serializedVersion: 2
+        x: 5220
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 474b8abaf75c14480800000000000000
+      internalID: -8916628635085392780
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_37
+      rect:
+        serializedVersion: 2
+        x: 5365
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3002d708ca7a91390800000000000000
+      internalID: -7847056516384481277
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_38
+      rect:
+        serializedVersion: 2
+        x: 5510
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d658e1705d26414a0800000000000000
+      internalID: -6623560484868160147
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_39
+      rect:
+        serializedVersion: 2
+        x: 5655
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f2de6d35629088600800000000000000
+      internalID: 470636221280218415
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_40
+      rect:
+        serializedVersion: 2
+        x: 5800
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7302680f448aaee60800000000000000
+      internalID: 7992385502768930871
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_41
+      rect:
+        serializedVersion: 2
+        x: 5945
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ac869723afac59d40800000000000000
+      internalID: 5590597688387791050
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_42
+      rect:
+        serializedVersion: 2
+        x: 6090
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3871dc12c20214900800000000000000
+      internalID: 666849593745282947
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_43
+      rect:
+        serializedVersion: 2
+        x: 6235
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 49f65cb858bf9e570800000000000000
+      internalID: 8496598723005345684
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_44
+      rect:
+        serializedVersion: 2
+        x: 6380
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 18824bb8009312d00800000000000000
+      internalID: 946100071231137921
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_45
+      rect:
+        serializedVersion: 2
+        x: 6525
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5378595da97600130800000000000000
+      internalID: 3530936022564439861
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_46
+      rect:
+        serializedVersion: 2
+        x: 6670
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c48cf1db40a168000800000000000000
+      internalID: 37746254534395980
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_47
+      rect:
+        serializedVersion: 2
+        x: 6815
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ee19a93ceb9f14530800000000000000
+      internalID: 3837622955217162734
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_48
+      rect:
+        serializedVersion: 2
+        x: 6960
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e45eb731c5d389570800000000000000
+      internalID: 8473590164570760526
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_49
+      rect:
+        serializedVersion: 2
+        x: 7105
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 99ab5aa3fb8ae5030800000000000000
+      internalID: 3485408700907502233
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_50
+      rect:
+        serializedVersion: 2
+        x: 7250
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 64399b8b9a030dde0800000000000000
+      internalID: -1310493986058038458
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_51
+      rect:
+        serializedVersion: 2
+        x: 7395
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 29eebebaa6b53b180800000000000000
+      internalID: -9100829908276613486
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_52
+      rect:
+        serializedVersion: 2
+        x: 7540
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0e1358b87ef2363d0800000000000000
+      internalID: -3214673037487689248
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_53
+      rect:
+        serializedVersion: 2
+        x: 7685
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c11e3b884ec9349b0800000000000000
+      internalID: -5097057847893303012
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_54
+      rect:
+        serializedVersion: 2
+        x: 7830
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 55675cf525f09e3f0800000000000000
+      internalID: -871148206450969003
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_55
+      rect:
+        serializedVersion: 2
+        x: 7975
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 953088b78249807b0800000000000000
+      internalID: -5257789663362940071
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_56
+      rect:
+        serializedVersion: 2
+        x: 8120
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9af2662e38fba3770800000000000000
+      internalID: 8591389812322611113
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_57
+      rect:
+        serializedVersion: 2
+        x: 8265
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5a2dcc13d02fbdf70800000000000000
+      internalID: 9213223601200485029
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_58
+      rect:
+        serializedVersion: 2
+        x: 8410
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c620c757f9d691ae0800000000000000
+      internalID: -1578109662778359188
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_59
+      rect:
+        serializedVersion: 2
+        x: 8555
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0ae3ba27d185d9860800000000000000
+      internalID: 7538278234789199520
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_60
+      rect:
+        serializedVersion: 2
+        x: 8700
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 24a18d0a1b678cb60800000000000000
+      internalID: 7766588062680226370
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_61
+      rect:
+        serializedVersion: 2
+        x: 8845
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 42e8b924c00fe0710800000000000000
+      internalID: 1661529247994056228
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_62
+      rect:
+        serializedVersion: 2
+        x: 8990
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6537a94f6963892b0800000000000000
+      internalID: -5577648116521602218
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_63
+      rect:
+        serializedVersion: 2
+        x: 9135
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 941829cb8ae31f560800000000000000
+      internalID: 7345721361657135433
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_64
+      rect:
+        serializedVersion: 2
+        x: 9280
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5975ac7efac17c710800000000000000
+      internalID: 1713369725071415189
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_65
+      rect:
+        serializedVersion: 2
+        x: 9425
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 81e22209f3bed9e30800000000000000
+      internalID: 4512021059928731160
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_66
+      rect:
+        serializedVersion: 2
+        x: 9570
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4e90d7af749f1ed20800000000000000
+      internalID: 3306197689007147492
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_67
+      rect:
+        serializedVersion: 2
+        x: 9715
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d2c023d10c6da4940800000000000000
+      internalID: 5281269633657211949
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_68
+      rect:
+        serializedVersion: 2
+        x: 9860
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f550b31e28e3291c0800000000000000
+      internalID: -4498464345944292001
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_69
+      rect:
+        serializedVersion: 2
+        x: 10005
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c9206f5ba839748b0800000000000000
+      internalID: -5167999823416786276
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_70
+      rect:
+        serializedVersion: 2
+        x: 10150
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d2406de6b76d16700800000000000000
+      internalID: 531942056635270189
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_71
+      rect:
+        serializedVersion: 2
+        x: 10295
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f0534c849afa54560800000000000000
+      internalID: 7297431912828908815
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_72
+      rect:
+        serializedVersion: 2
+        x: 10440
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b2f7d565adf8611c0800000000000000
+      internalID: -4533277806987215061
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_73
+      rect:
+        serializedVersion: 2
+        x: 10585
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 092000e6b1d6ed590800000000000000
+      internalID: -7647555152651484528
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_74
+      rect:
+        serializedVersion: 2
+        x: 10730
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d7a5216965ceabf10800000000000000
+      internalID: 2286399617473075837
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_75
+      rect:
+        serializedVersion: 2
+        x: 10875
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 626f4951ee859aa10800000000000000
+      internalID: 1921164495637771814
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_76
+      rect:
+        serializedVersion: 2
+        x: 11020
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 230b2a2e9f20a1370800000000000000
+      internalID: 8293944936028614706
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_77
+      rect:
+        serializedVersion: 2
+        x: 11165
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1269af9fe63768740800000000000000
+      internalID: 5153933744049657377
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_78
+      rect:
+        serializedVersion: 2
+        x: 11310
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 994d761fce3e9dbe0800000000000000
+      internalID: -1451878798048373607
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_79
+      rect:
+        serializedVersion: 2
+        x: 11455
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9c968f63f10833f90800000000000000
+      internalID: -6975090526312175159
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_80
+      rect:
+        serializedVersion: 2
+        x: 11600
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e0a7795bb6e2ed290800000000000000
+      internalID: -7863796859199325682
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_81
+      rect:
+        serializedVersion: 2
+        x: 11745
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 575829927cd96e620800000000000000
+      internalID: 2803101296806233461
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_82
+      rect:
+        serializedVersion: 2
+        x: 11890
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 40ab5d7f643af21c0800000000000000
+      internalID: -4526219575283041788
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_83
+      rect:
+        serializedVersion: 2
+        x: 12035
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1d47686b9a26c2910800000000000000
+      internalID: 1813933230974727377
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_84
+      rect:
+        serializedVersion: 2
+        x: 12180
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 935a9326267cf0520800000000000000
+      internalID: 2670572329422660921
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_85
+      rect:
+        serializedVersion: 2
+        x: 12325
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a108b3fd422e71c00800000000000000
+      internalID: 871413700911398938
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_86
+      rect:
+        serializedVersion: 2
+        x: 12470
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d6d3e7a641c406d80800000000000000
+      internalID: -8259518066027774611
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_87
+      rect:
+        serializedVersion: 2
+        x: 12615
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 619d612fca05b96e0800000000000000
+      internalID: -1829780119869794026
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_88
+      rect:
+        serializedVersion: 2
+        x: 12760
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d8bd6a4290610efd0800000000000000
+      internalID: -2314825979943003251
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_89
+      rect:
+        serializedVersion: 2
+        x: 12905
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 48c1fa88aada97030800000000000000
+      internalID: 3493013933951753348
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_90
+      rect:
+        serializedVersion: 2
+        x: 13050
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d5c20336690073ea0800000000000000
+      internalID: -5893240941481808803
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_91
+      rect:
+        serializedVersion: 2
+        x: 13195
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 141851b1978a2ab80800000000000000
+      internalID: -8384954318111538879
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_92
+      rect:
+        serializedVersion: 2
+        x: 13340
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3c0142971006a7c10800000000000000
+      internalID: 2052058139664322755
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_93
+      rect:
+        serializedVersion: 2
+        x: 13485
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f59fd18c557489e40800000000000000
+      internalID: 5663354965173598559
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_94
+      rect:
+        serializedVersion: 2
+        x: 13630
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0442822a093dae7f0800000000000000
+      internalID: -582420583641766848
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_95
+      rect:
+        serializedVersion: 2
+        x: 13775
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d52eb41e7c27531c0800000000000000
+      internalID: -4524584047819890083
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_96
+      rect:
+        serializedVersion: 2
+        x: 13920
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 253570e18c71dfc60800000000000000
+      internalID: 7853459473468707666
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_97
+      rect:
+        serializedVersion: 2
+        x: 14065
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d2b19dbff31938f90800000000000000
+      internalID: -6952553695735637203
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_98
+      rect:
+        serializedVersion: 2
+        x: 14210
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 79e99264c2063f5c0800000000000000
+      internalID: -4182893885625098601
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: batwing_99
+      rect:
+        serializedVersion: 2
+        x: 14355
+        y: 0
+        width: 145
+        height: 58
+      alignment: 4
+      pivot: {x: 0, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9591eaae5f8e1c7a0800000000000000
+      internalID: -6358545055968519847
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      batwing_00: -6198733563674774906
+      batwing_01: -6384137349566770719
+      batwing_02: -7970781184550707278
+      batwing_03: 6780392515734868496
+      batwing_04: 1678118484378357286
+      batwing_05: 3024097241740916589
+      batwing_06: 6425480809214183641
+      batwing_07: -8207932502686324974
+      batwing_08: -1402265300496473608
+      batwing_09: -3559676866605572165
+      batwing_10: -4555820890051344456
+      batwing_11: -8833797046555574568
+      batwing_12: -6336512032325225660
+      batwing_13: 6735760386437957521
+      batwing_14: -2435997485312468943
+      batwing_15: -7664714201446809248
+      batwing_16: 5181529731360815036
+      batwing_17: -35472032864570157
+      batwing_18: 5455221163205078708
+      batwing_19: 5727062112732714098
+      batwing_20: 954761857855363937
+      batwing_21: 2909278619730140934
+      batwing_22: -3640964247069936176
+      batwing_23: 1064458656708959380
+      batwing_24: -2941219683883555772
+      batwing_25: 6782179083555809863
+      batwing_26: 1885128587566260597
+      batwing_27: 4015553300535892096
+      batwing_28: 3554419660297542970
+      batwing_29: 8822312231787942331
+      batwing_30: -6438463358815423546
+      batwing_31: -4469642552496883343
+      batwing_32: -8908174271628531343
+      batwing_33: -7354619120689889333
+      batwing_34: -8537753396379052950
+      batwing_35: 7812521038904709036
+      batwing_36: -8916628635085392780
+      batwing_37: -7847056516384481277
+      batwing_38: -6623560484868160147
+      batwing_39: 470636221280218415
+      batwing_40: 7992385502768930871
+      batwing_41: 5590597688387791050
+      batwing_42: 666849593745282947
+      batwing_43: 8496598723005345684
+      batwing_44: 946100071231137921
+      batwing_45: 3530936022564439861
+      batwing_46: 37746254534395980
+      batwing_47: 3837622955217162734
+      batwing_48: 8473590164570760526
+      batwing_49: 3485408700907502233
+      batwing_50: -1310493986058038458
+      batwing_51: -9100829908276613486
+      batwing_52: -3214673037487689248
+      batwing_53: -5097057847893303012
+      batwing_54: -871148206450969003
+      batwing_55: -5257789663362940071
+      batwing_56: 8591389812322611113
+      batwing_57: 9213223601200485029
+      batwing_58: -1578109662778359188
+      batwing_59: 7538278234789199520
+      batwing_60: 7766588062680226370
+      batwing_61: 1661529247994056228
+      batwing_62: -5577648116521602218
+      batwing_63: 7345721361657135433
+      batwing_64: 1713369725071415189
+      batwing_65: 4512021059928731160
+      batwing_66: 3306197689007147492
+      batwing_67: 5281269633657211949
+      batwing_68: -4498464345944292001
+      batwing_69: -5167999823416786276
+      batwing_70: 531942056635270189
+      batwing_71: 7297431912828908815
+      batwing_72: -4533277806987215061
+      batwing_73: -7647555152651484528
+      batwing_74: 2286399617473075837
+      batwing_75: 1921164495637771814
+      batwing_76: 8293944936028614706
+      batwing_77: 5153933744049657377
+      batwing_78: -1451878798048373607
+      batwing_79: -6975090526312175159
+      batwing_80: -7863796859199325682
+      batwing_81: 2803101296806233461
+      batwing_82: -4526219575283041788
+      batwing_83: 1813933230974727377
+      batwing_84: 2670572329422660921
+      batwing_85: 871413700911398938
+      batwing_86: -8259518066027774611
+      batwing_87: -1829780119869794026
+      batwing_88: -2314825979943003251
+      batwing_89: 3493013933951753348
+      batwing_90: -5893240941481808803
+      batwing_91: -8384954318111538879
+      batwing_92: 2052058139664322755
+      batwing_93: 5663354965173598559
+      batwing_94: -582420583641766848
+      batwing_95: -4524584047819890083
+      batwing_96: 7853459473468707666
+      batwing_97: -6952553695735637203
+      batwing_98: -4182893885625098601
+      batwing_99: -6358545055968519847
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

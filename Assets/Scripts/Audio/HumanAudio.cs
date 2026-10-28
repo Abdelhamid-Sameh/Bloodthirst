@@ -36,6 +36,7 @@ public class HumanAudio : MonoBehaviour
     HumanAI ai;
     NavMeshAgent agent;
     AudioSource source;
+    AudioSource voiceSource;
     HumanAI.State lastState;
     float stepTimer;
     float screamTimer;
@@ -45,6 +46,7 @@ public class HumanAudio : MonoBehaviour
         ai = GetComponent<HumanAI>();
         agent = GetComponent<NavMeshAgent>();
         source = GetComponent<AudioSource>();
+        voiceSource = CloneSource(source);
         lastState = ai.currentState;
     }
 
@@ -62,9 +64,10 @@ public class HumanAudio : MonoBehaviour
         if (state == HumanAI.State.Fleeing)
         {
             screamTimer -= Time.deltaTime;
-            if (screamTimer <= 0f)
+            // The next scream waits until the current one has finished.
+            if (screamTimer <= 0f && !voiceSource.isPlaying)
             {
-                Play(fleeScreams, voiceVolume);
+                Say(fleeScreams);
                 screamTimer = Random.Range(fleeScreamInterval.x, fleeScreamInterval.y);
             }
         }
@@ -77,7 +80,7 @@ public class HumanAudio : MonoBehaviour
             if (stepTimer <= 0f)
             {
                 bool running = speed >= runSpeedThreshold;
-                Play(running ? runSteps : walkSteps, footstepVolume);
+                PlayStep(running ? runSteps : walkSteps);
                 stepTimer = running ? runStepInterval : walkStepInterval;
             }
         }
@@ -92,28 +95,60 @@ public class HumanAudio : MonoBehaviour
         switch (state)
         {
             case HumanAI.State.Alerted:
-                Play(alertedGasps, voiceVolume);
+                Say(alertedGasps);
                 break;
             case HumanAI.State.Fleeing:
-                Play(fleeScreams, voiceVolume);
+                Say(fleeScreams);
                 screamTimer = Random.Range(fleeScreamInterval.x, fleeScreamInterval.y);
                 break;
             case HumanAI.State.Captured:
                 source.Stop();
-                Play(capturedScreams, voiceVolume);
+                Say(capturedScreams);
                 break;
             case HumanAI.State.Dead:
-                Play(deathSounds, voiceVolume);
+                Say(deathSounds);
                 break;
         }
     }
 
-    void Play(AudioClip[] clips, float volume)
+    // One voice at a time: a new gasp or scream replaces the one still playing instead of stacking on it.
+    void Say(AudioClip[] clips)
     {
         if (clips == null || clips.Length == 0) return;
         AudioClip clip = clips[Random.Range(0, clips.Length)];
         if (clip == null) return;
+        voiceSource.Stop();
+        voiceSource.clip = clip;
+        voiceSource.volume = voiceVolume;
+        voiceSource.pitch = 1f + Random.Range(-pitchJitter, pitchJitter);
+        voiceSource.Play();
+    }
+
+    // Each step cuts off the previous one.
+    void PlayStep(AudioClip[] clips)
+    {
+        if (clips == null || clips.Length == 0) return;
+        AudioClip clip = clips[Random.Range(0, clips.Length)];
+        if (clip == null) return;
+        source.Stop();
         source.pitch = 1f + Random.Range(-pitchJitter, pitchJitter);
-        source.PlayOneShot(clip, volume);
+        source.PlayOneShot(clip, footstepVolume);
+    }
+
+    // A second source with the same 3D settings, so one kind of sound can cut itself off without touching the rest.
+    AudioSource CloneSource(AudioSource from)
+    {
+        var s = gameObject.AddComponent<AudioSource>();
+        s.playOnAwake = false;
+        s.outputAudioMixerGroup = from.outputAudioMixerGroup;
+        s.spatialBlend = from.spatialBlend;
+        s.rolloffMode = from.rolloffMode;
+        s.minDistance = from.minDistance;
+        s.maxDistance = from.maxDistance;
+        s.dopplerLevel = from.dopplerLevel;
+        s.spread = from.spread;
+        if (from.rolloffMode == AudioRolloffMode.Custom)
+            s.SetCustomCurve(AudioSourceCurveType.CustomRolloff, from.GetCustomCurve(AudioSourceCurveType.CustomRolloff));
+        return s;
     }
 }

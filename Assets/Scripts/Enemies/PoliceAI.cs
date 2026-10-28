@@ -342,6 +342,24 @@ public class PoliceAI : MonoBehaviour
         return true;
     }
 
+    AudioSource shotSource;
+
+    // Gunshots must carry across the street; PlayClipAtPoint's default log rolloff made them near-silent beyond ~15 m.
+    void PlayShot()
+    {
+        if (shotSource == null)
+        {
+            shotSource = gameObject.AddComponent<AudioSource>();
+            shotSource.playOnAwake = false;
+            shotSource.spatialBlend = 1f;
+            shotSource.rolloffMode = AudioRolloffMode.Linear;
+            shotSource.minDistance = 10f;
+            shotSource.maxDistance = 120f;
+        }
+        shotSource.pitch = Random.Range(0.94f, 1.06f);
+        shotSource.PlayOneShot(shotSound, shotVolume);
+    }
+
     void Fire(Vector3 aim)
     {
         nextFireTime = Time.time + fireInterval;
@@ -370,7 +388,7 @@ public class PoliceAI : MonoBehaviour
         }
 
         ShowShot(origin, end);
-        if (shotSound != null) AudioSource.PlayClipAtPoint(shotSound, origin, shotVolume);
+        if (shotSound != null) PlayShot();
     }
 
     void BuildEffects()
