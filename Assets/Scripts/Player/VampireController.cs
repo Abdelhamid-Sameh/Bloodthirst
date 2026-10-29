@@ -48,14 +48,16 @@ public class VampireController : MonoBehaviour
     [Range(0, 1)] public float killAtNormalizedTime = 0.7f;
 
     [Header("Fight (Right click or Q)")]
-    [Tooltip("How far in front of him a swing reaches.")]
-    public float attackRange = 2.5f;
+    [Tooltip("How far from him (pivot to pivot) a blow still hits. His fists reach about 0.45 m in front of him, and an officer's collider keeps him about 0.74 m away, so keep this small or blows land on people he is visibly not touching.")]
+    public float attackRange = 0.9f;
     [Tooltip("If an officer is this close (in the direction he is aiming), he runs up to him before swinging. 0 = swing on the spot.")]
     public float attackSeekRange = 6f;
-    [Tooltip("How close he gets to the officer before the combo starts.")]
-    public float fightDistance = 1.1f;
+    [Tooltip("How close (pivot to pivot) he gets to his target before the combo starts. His fists reach about 0.45 m, so 0.7 puts them on the target's body (officers' colliders stop him at about 0.74 anyway).")]
+    public float fightDistance = 0.7f;
     [Tooltip("Speed of the dash toward the officer.")]
     public float lungeSpeed = 9f;
+    [Tooltip("During the combo, if the target ends up further than fightDistance, he steps back in at this speed.")]
+    public float attackStepSpeed = 3f;
     [Tooltip("How wide the swing is (degrees, centred on where he faces).")]
     [Range(0, 360)] public float attackAngle = 120f;
     [Tooltip("Damage per hit. Humans and police have 40 health by default. Hits wear health down but never kill; a bite does (police only once weakened).")]
@@ -451,6 +453,12 @@ IEnumerator AttackRoutine()
         Component target = FindFightTarget(aimDir);
         HumanAI humanTarget = target as HumanAI;
         if (humanTarget != null) humanTarget.FreezeInFear(2.5f); // terrified: he does not run off while the vampire closes in
+        PoliceAI officerTarget = target as PoliceAI;
+        if (officerTarget != null)
+        {
+            officerTarget.HoldForFight(2.5f); // he stands his ground instead of backing off
+            SetIgnoreOfficer(officerTarget, true); // his collider would otherwise keep the fists a body-width away
+        }
         if (target != null) yield return ApproachTarget(target);
 
         if (hasAttackAnim)
@@ -462,7 +470,11 @@ IEnumerator AttackRoutine()
             yield return WaitForAction(AttackState, t =>
             {
                 // Keep facing the target while he is pushed around by the blows.
-                if (CanFight(target)) FaceFlat(target.transform.position, runTurnSpeed);
+                if (CanFight(target))
+                {
+                    FaceFlat(target.transform.position, runTurnSpeed);
+                    StepCloser(target, attackStepSpeed);
+                }
                 while (hitTimes != null && nextHit < hitTimes.Length && t >= hitTimes[nextHit])
                 {
                     nextHit++;
@@ -478,6 +490,7 @@ IEnumerator AttackRoutine()
             yield return new WaitForSeconds(fallbackAttackDuration * 0.5f);
         }
 
+        SetIgnoreOfficer(null, false);
         nextAttackTime = Time.time + attackCooldown;
         IsBusy = false;
     }
@@ -545,12 +558,20 @@ Component FindFightTarget(Vector3 aimDir)
 IEnumerator ApproachTarget(Component target)
     {
         float timeout = 1.5f;
+        float stalled = 0f;
+        float lastDist = float.MaxValue;
         animator.SetFloat(SpeedHash, 1f); // run animation while closing in
         while (timeout > 0f && CanFight(target))
         {
             Vector3 to = Vector3.ProjectOnPlane(target.transform.position - transform.position, Vector3.up);
             float dist = to.magnitude;
-            if (dist <= fightDistance) break;
+            if (dist <= fightDistance + 0.05f) break;
+
+            // Stop when he cannot get any closer (an officer's collider is in the way) instead of running on the spot.
+            if (dist > lastDist - 0.003f) stalled += Time.deltaTime; else stalled = 0f;
+            if (stalled > 0.15f) break;
+            lastDist = dist;
+
             FaceFlat(target.transform.position, runTurnSpeed);
             float step = Mathf.Min(lungeSpeed * Time.deltaTime, dist - fightDistance);
             controller.Move((to / dist) * step);
@@ -564,6 +585,16 @@ IEnumerator ApproachTarget(Component target)
             Vector3 face = Vector3.ProjectOnPlane(target.transform.position - transform.position, Vector3.up);
             if (face.sqrMagnitude > 0.0001f) transform.rotation = Quaternion.LookRotation(face);
         }
+    }
+
+    /// <summary>Steps toward the target if it has drifted further than fightDistance, so the blows keep landing at arm's length.</summary>
+    void StepCloser(Component target, float speed)
+    {
+        Vector3 to = Vector3.ProjectOnPlane(target.transform.position - transform.position, Vector3.up);
+        float dist = to.magnitude;
+        if (dist <= fightDistance + 0.1f || dist < 0.01f) return;
+        float step = Mathf.Min(speed * Time.deltaTime, dist - fightDistance);
+        controller.Move((to / dist) * step);
     }
 
     void FaceFlat(Vector3 worldPos, float degreesPerSecond)
@@ -734,6 +765,7 @@ IEnumerator ApproachTarget(Component target)
     {
         if (IsDead) return;
         StopAllCoroutines();
+        SetIgnoreOfficer(null, false);
         if (currentVictim != null) currentVictim.Release(); // a bite cut short lets the victim escape
         currentVictim = null;
         if (inSequence) EndSequence();
@@ -836,5 +868,25 @@ IEnumerator WaitForAction(string stateName, System.Action<float> onProgress, flo
         Gizmos.DrawWireSphere(transform.position, coffinRange);
         Gizmos.color = new Color(1f, 0.5f, 0f, 0.6f);
         Gizmos.DrawWireSphere(transform.position, attackRange);
+    }
+
+
+PoliceAI ignoredOfficer;
+
+    /// <summary>While fighting an officer, the vampire's body and the officer's colliders stop pushing each other so he can stand right in front of him.</summary>
+    void SetIgnoreOfficer(PoliceAI officer, bool ignore)
+    {
+        if (ignore)
+        {
+            ignoredOfficer = officer;
+            foreach (Collider c in officer.GetComponentsInChildren<Collider>())
+                Physics.IgnoreCollision(controller, c, true);
+        }
+        else if (ignoredOfficer != null)
+        {
+            foreach (Collider c in ignoredOfficer.GetComponentsInChildren<Collider>())
+                Physics.IgnoreCollision(controller, c, false);
+            ignoredOfficer = null;
+        }
     }
 }

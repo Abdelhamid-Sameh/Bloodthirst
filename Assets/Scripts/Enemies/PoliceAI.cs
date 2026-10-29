@@ -48,7 +48,9 @@ public class PoliceAI : MonoBehaviour
     [Tooltip("Seconds the officer cannot shoot after being hit.")]
     public float hitStaggerTime = 0.6f;
     [Tooltip("How far a hit pushes the officer back.")]
-    public float knockbackDistance = 0.3f;
+    public float knockbackDistance = 0.05f;
+    [Tooltip("Minimum seconds between two hit-reaction animations, so a fast combo does not restart the reaction on every blow.")]
+    public float hitRetriggerDelay = 1.0f;
 
     [Header("Shooting")]
     [Tooltip("Where shots come from. Empty = the child called Gun.")]
@@ -87,6 +89,11 @@ public class PoliceAI : MonoBehaviour
     static readonly int AimingHash = Animator.StringToHash("Aiming");
     static readonly int ShootHash = Animator.StringToHash("Shoot");
     static readonly int DieHash = Animator.StringToHash("Die");
+    static readonly int HitHash = Animator.StringToHash("Hit");
+    bool hasHitAnim;
+    float nextHitAnimTime;
+    float staggerUntil;
+    bool wasStaggered;
     float tracerHideTime;
 
     bool engaged;
@@ -110,6 +117,9 @@ public class PoliceAI : MonoBehaviour
         if (gun == null) gun = transform.Find("Gun");
         BuildEffects();
         animator = GetComponentInChildren<Animator>();
+        if (animator != null)
+            foreach (AnimatorControllerParameter p in animator.parameters)
+                if (p.name == "Hit" && p.type == AnimatorControllerParameterType.Trigger) hasHitAnim = true;
     }
 
     // Feeds the animator: how fast the officer walks, and whether he is aiming his gun.
@@ -157,6 +167,24 @@ public class PoliceAI : MonoBehaviour
         {
             tracer.enabled = false;
             muzzleFlash.enabled = false;
+        }
+
+        // Staggered by a hit: he stands still and cannot shoot until his hit reaction has finished.
+        if (Time.time < staggerUntil || IsInHitReaction())
+        {
+            if (agent.enabled && agent.isOnNavMesh)
+            {
+                agent.isStopped = true;
+                agent.velocity = Vector3.zero;
+            }
+            wasStaggered = true;
+            return;
+        }
+        if (wasStaggered)
+        {
+            wasStaggered = false;
+            hasSpot = false; // pick a fresh spot now that he can move again
+            if (agent.enabled && agent.isOnNavMesh) agent.isStopped = false;
         }
 
         if (vampireHealth != null && vampireHealth.IsDead)
@@ -478,9 +506,11 @@ public void TakeHit(float amount, Transform attacker)
         engaged = true;
         lastMoveTime = Time.time;
 
-        // Stagger: no shooting for a moment, and a small push away from the attacker.
+        // Stagger: no shooting or walking while the hit reaction plays, and a small push away from the attacker.
         nextFireTime = Mathf.Max(nextFireTime, Time.time + hitStaggerTime);
-        if (attacker != null && agent != null && agent.enabled && agent.isOnNavMesh)
+        staggerUntil = Time.time + 0.3f; // bridges the frames before the reaction state begins
+        PlayHitAnimation();
+        if (attacker != null && knockbackDistance > 0f && agent != null && agent.enabled && agent.isOnNavMesh)
         {
             Vector3 push = transform.position - attacker.position;
             push.y = 0f;
@@ -500,6 +530,24 @@ public void TakeHit(float amount, Transform attacker)
         }
     }
 
+/// <summary>Plays the officer's "taking a punch" animation, not more often than hitRetriggerDelay.</summary>
+    void PlayHitAnimation()
+    {
+        if (animator == null || !hasHitAnim || Time.time < nextHitAnimTime) return;
+        nextHitAnimTime = Time.time + hitRetriggerDelay;
+        animator.ResetTrigger(HitHash);
+        animator.SetTrigger(HitHash);
+    }
+
+    /// <summary>True while the hit reaction is playing (or about to).</summary>
+    bool IsInHitReaction()
+    {
+        if (animator == null || !hasHitAnim) return false;
+        if (animator.GetCurrentAnimatorStateInfo(0).IsName("Hit")) return true;
+        return animator.IsInTransition(0) && animator.GetNextAnimatorStateInfo(0).IsName("Hit");
+    }
+
+
 
     /// <summary>Called by the vampire when the bite kills this officer.</summary>
     public void Die()
@@ -511,6 +559,7 @@ public void TakeHit(float amount, Transform attacker)
         if (agent.enabled) agent.enabled = false;
         SetCollidersEnabled(false);
         HideShot();
+        if (animator != null && hasHitAnim) animator.ResetTrigger(HitHash); // a stale hit reaction must never play over the corpse
         if (animator != null) animator.SetTrigger(DieHash);
         else StartCoroutine(Collapse());
     }
@@ -550,5 +599,12 @@ public void TakeHit(float amount, Transform attacker)
         a.y = 0f;
         b.y = 0f;
         return Vector3.Distance(a, b);
+    }
+
+
+/// <summary>The vampire is closing in to fight: stand still (no walking, no shooting) for a moment so he can reach you.</summary>
+    public void HoldForFight(float seconds)
+    {
+        staggerUntil = Mathf.Max(staggerUntil, Time.time + seconds);
     }
 }

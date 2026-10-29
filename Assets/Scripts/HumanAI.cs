@@ -37,7 +37,9 @@ public class HumanAI : MonoBehaviour
     [Tooltip("Seconds a human stays dazed in place after being hit, before he runs.")]
     public float hitStunTime = 1.2f;
     [Tooltip("How far a hit pushes the human back.")]
-    public float knockbackDistance = 0.3f;
+    public float knockbackDistance = 0.05f;
+    [Tooltip("Minimum seconds between two hit-reaction animations, so a fast combo does not restart the reaction on every blow.")]
+    public float hitRetriggerDelay = 1.0f;
 
     [Header("Wander/Idle Timing")]
     public float wanderRadius = 10f;
@@ -50,6 +52,9 @@ public class HumanAI : MonoBehaviour
     private float fleeRepathTimer;
 private float stateTimer;
     private float health = -1f; // -1 = not set yet, becomes maxHealth on the first hit
+    private static readonly int HitHash = Animator.StringToHash("Hit");
+    private bool hasHitAnim;
+    private float nextHitAnimTime;
 
     /// <summary>False once the vampire has killed this human.</summary>
     public bool IsAlive => currentState != State.Dead;
@@ -62,6 +67,7 @@ private float stateTimer;
     {
         agent = GetComponent<NavMeshAgent>();
         animator = GetComponent<Animator>();
+        hasHitAnim = HasAnimatorParameter("Hit");
     }
 
     private void Start()
@@ -305,9 +311,10 @@ public void TakeHit(float amount, Transform attacker)
             away.y = 0f;
         }
 
-        // Dazed in place for a moment (so the rest of the combo can land), then he runs.
+        // Dazed in place while the hit reaction plays (so the rest of the combo can land), then he runs.
         FreezeInFear(hitStunTime);
-        if (away.sqrMagnitude > 0.001f) StartCoroutine(Knockback(away.normalized * knockbackDistance));
+        PlayHitAnimation();
+        if (away.sqrMagnitude > 0.001f && knockbackDistance > 0f) StartCoroutine(Knockback(away.normalized * knockbackDistance));
     }
 
     /// <summary>Holds the human in place, terrified, for a few seconds before he runs. Used while the vampire closes in for a fight.</summary>
@@ -324,9 +331,18 @@ public void TakeHit(float amount, Transform attacker)
         StartCoroutine(FleeAfter(seconds));
     }
 
-    private IEnumerator FleeAfter(float seconds)
+private IEnumerator FleeAfter(float seconds)
     {
         yield return new WaitForSeconds(seconds);
+
+        // Do not run off in the middle of the hit reaction (it is a stooped, staggering pose).
+        float guard = 3f;
+        while (guard > 0f && IsInHitReaction())
+        {
+            guard -= Time.deltaTime;
+            yield return null;
+        }
+
         if (currentState != State.Alerted || !agent.enabled || !agent.isOnNavMesh) yield break;
         currentState = State.Fleeing;
         fleeRepathTimer = 0f; // pick a flee path right away
@@ -346,6 +362,24 @@ public void TakeHit(float amount, Transform attacker)
         }
     }
 
+/// <summary>Plays this character's own "getting hit" animation (punch or uppercut), not more often than hitRetriggerDelay.</summary>
+    private void PlayHitAnimation()
+    {
+        if (!hasHitAnim || Time.time < nextHitAnimTime) return;
+        nextHitAnimTime = Time.time + hitRetriggerDelay;
+        animator.ResetTrigger(HitHash);
+        animator.SetTrigger(HitHash);
+    }
+
+    /// <summary>True while the hit reaction is playing (or about to).</summary>
+    private bool IsInHitReaction()
+    {
+        if (!hasHitAnim) return false;
+        if (animator.GetCurrentAnimatorStateInfo(0).IsName("Hit")) return true;
+        return animator.IsInTransition(0) && animator.GetNextAnimatorStateInfo(0).IsName("Hit");
+    }
+
+
 
     /// <summary>Called by the vampire when the bite kills this human.</summary>
 public void OnKilled()
@@ -360,6 +394,7 @@ public void OnKilled()
             // Play the character's real death animation (it stays on its last frame, lying on the ground).
             animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
             animator.SetFloat("Speed", 0f);
+            if (hasHitAnim) animator.ResetTrigger(HitHash); // a stale hit reaction must never play over the corpse
             animator.ResetTrigger("Die");
             animator.SetTrigger("Die");
         }

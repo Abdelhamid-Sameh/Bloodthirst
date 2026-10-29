@@ -1498,7 +1498,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6066031038710568296, guid: 0cebd7fd2c5319748bfb266eab9d81ef, type: 3}
       propertyPath: knockbackDistance
-      value: 0.3
+      value: 0.05
       objectReference: {fileID: 0}
     - target: {fileID: 6465151491722235772, guid: 0cebd7fd2c5319748bfb266eab9d81ef, type: 3}
       propertyPath: m_LocalPosition.x
@@ -3288,7 +3288,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4516278329640033309, guid: 2a974e577b29a6f4b888635a64fb7881, type: 3}
       propertyPath: knockbackDistance
-      value: 0.3
+      value: 0.05
       objectReference: {fileID: 0}
     - target: {fileID: 5734638090397224303, guid: 2a974e577b29a6f4b888635a64fb7881, type: 3}
       propertyPath: m_Name
@@ -4959,7 +4959,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6066031038710568296, guid: 0cebd7fd2c5319748bfb266eab9d81ef, type: 3}
       propertyPath: knockbackDistance
-      value: 0.3
+      value: 0.05
       objectReference: {fileID: 0}
     - target: {fileID: 6465151491722235772, guid: 0cebd7fd2c5319748bfb266eab9d81ef, type: 3}
       propertyPath: m_LocalPosition.x
@@ -6094,7 +6094,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6066031038710568296, guid: 0cebd7fd2c5319748bfb266eab9d81ef, type: 3}
       propertyPath: knockbackDistance
-      value: 0.3
+      value: 0.05
       objectReference: {fileID: 0}
     - target: {fileID: 6465151491722235772, guid: 0cebd7fd2c5319748bfb266eab9d81ef, type: 3}
       propertyPath: m_LocalPosition.x
@@ -7898,7 +7898,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4516278329640033309, guid: 2a974e577b29a6f4b888635a64fb7881, type: 3}
       propertyPath: knockbackDistance
-      value: 0.3
+      value: 0.05
       objectReference: {fileID: 0}
     - target: {fileID: 5734638090397224303, guid: 2a974e577b29a6f4b888635a64fb7881, type: 3}
       propertyPath: m_Name
@@ -8980,7 +8980,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4516278329640033309, guid: 2a974e577b29a6f4b888635a64fb7881, type: 3}
       propertyPath: knockbackDistance
-      value: 0.3
+      value: 0.05
       objectReference: {fileID: 0}
     - target: {fileID: 5734638090397224303, guid: 2a974e577b29a6f4b888635a64fb7881, type: 3}
       propertyPath: m_Name
@@ -10761,6 +10761,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 1673993232721305307, guid: cc187acec693697449f60143ae167a25, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1528835735}
+    - targetCorrespondingSourceObject: {fileID: 4751409228903768145, guid: cc187acec693697449f60143ae167a25, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1528835731}
   m_SourcePrefab: {fileID: 100100000, guid: cc187acec693697449f60143ae167a25, type: 3}
 --- !u!1 &1528835726 stripped
 GameObject:
@@ -10802,10 +10805,11 @@ MonoBehaviour:
   biteAngle: 120
   victimHoldDistance: 0.75
   killAtNormalizedTime: 0.7
-  attackRange: 2.5
+  attackRange: 0.7
   attackSeekRange: 6
-  fightDistance: 1.1
+  fightDistance: 0.5
   lungeSpeed: 9
+  attackStepSpeed: 3
   attackAngle: 120
   attackDamage: 20
   hitTimes:
@@ -10844,6 +10848,40 @@ MonoBehaviour:
   onRespawn:
     m_PersistentCalls:
       m_Calls: []
+--- !u!1 &1528835730 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 4751409228903768145, guid: cc187acec693697449f60143ae167a25, type: 3}
+  m_PrefabInstance: {fileID: 1528835725}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1528835731
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1528835730}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 474bcb49853aa07438625e644c072ee6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.UniversalAdditionalLightData
+  m_UsePipelineSettings: 1
+  m_AdditionalLightsShadowResolutionTier: 2
+  m_CustomShadowLayers: 0
+  m_LightCookieSize: {x: 1, y: 1}
+  m_LightCookieOffset: {x: 0, y: 0}
+  m_SoftShadowQuality: 0
+  m_RenderingLayersMask:
+    serializedVersion: 0
+    m_Bits: 1
+  m_ShadowRenderingLayersMask:
+    serializedVersion: 0
+    m_Bits: 1
+  m_Version: 4
+  m_LightLayerMask: 1
+  m_ShadowLayerMask: 1
+  m_RenderingLayers: 1
+  m_ShadowRenderingLayers: 1
 --- !u!114 &1528835735
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -10863,12 +10901,16 @@ MonoBehaviour:
   land: []
   bite: []
   feed: []
+  hurt: []
   death: []
   actionVolume: 0.9
   lieDown: {fileID: 0}
   rise: {fileID: 0}
   vanish: {fileID: 0}
   appear: {fileID: 0}
+  heartbeat: {fileID: 0}
+  heartbeatVolume: 0.8
+  heartbeatMaxPitch: 1.5
   pitchJitter: 0.08
 --- !u!82 &1528835736
 AudioSource:
