@@ -15,7 +15,7 @@ using UnityEngine.AI;
 [RequireComponent(typeof(NavMeshAgent))]
 public class PoliceAI : MonoBehaviour
 {
-    public enum State { Idle, Moving, Shooting, Captured, Dead }
+    public enum State { Idle, Moving, Shooting, Captured, Dead, Melee }
 
     [Header("Current State (read only)")]
     public State currentState = State.Idle;
@@ -51,6 +51,28 @@ public class PoliceAI : MonoBehaviour
     public float knockbackDistance = 0.05f;
     [Tooltip("Minimum seconds between two hit-reaction animations, so a fast combo does not restart the reaction on every blow.")]
     public float hitRetriggerDelay = 1.0f;
+
+    [Header("Melee & shield")]
+    [Tooltip("Turn on to let this officer punch the vampire when he gets close and raise his shield (body block) when the vampire attacks him.")]
+    public bool enableMelee = false;
+    [Tooltip("If the vampire is closer than this, the officer fights him with his fists instead of backing off to shoot.")]
+    public float meleeRange = 2f;
+    [Tooltip("Damage of one punch.")]
+    public float meleeDamage = 8f;
+    [Tooltip("Seconds between two punches.")]
+    public float meleeInterval = 1.4f;
+    [Tooltip("Seconds into the punch animation when the fist lands.")]
+    public float punchHitTime = 0.32f;
+    [Tooltip("How long one punch keeps him busy (the length of the punch animation).")]
+    public float punchDuration = 1f;
+    [Tooltip("Chance (0-1) that he raises his shield when the vampire attacks him.")]
+    [Range(0f, 1f)] public float blockChance = 0.6f;
+    [Tooltip("Seconds the shield stays up (the body block animation lasts 3.4 s).")]
+    public float blockDuration = 3f;
+    [Tooltip("Seconds he must wait after lowering the shield before he can raise it again.")]
+    public float blockCooldown = 2f;
+    [Tooltip("While the shield is up, blows only do this fraction of their damage and do not make him flinch.")]
+    [Range(0f, 1f)] public float blockedDamageMultiplier = 0.25f;
 
     [Header("Shooting")]
     [Tooltip("Where shots come from. Empty = the child called Gun.")]
@@ -90,6 +112,11 @@ public class PoliceAI : MonoBehaviour
     static readonly int ShootHash = Animator.StringToHash("Shoot");
     static readonly int DieHash = Animator.StringToHash("Die");
     static readonly int HitHash = Animator.StringToHash("Hit");
+    static readonly int PunchHash = Animator.StringToHash("Punch");
+    static readonly int BlockingHash = Animator.StringToHash("Blocking");
+    bool hasPunchAnim, hasBlockAnim;
+    bool isPunching, wasVampireBusy;
+    float punchEndTime, nextMeleeTime, blockUntil, nextBlockTime;
     bool hasHitAnim;
     float nextHitAnimTime;
     float staggerUntil;
@@ -119,7 +146,9 @@ public class PoliceAI : MonoBehaviour
         animator = GetComponentInChildren<Animator>();
         if (animator != null)
             foreach (AnimatorControllerParameter p in animator.parameters)
-                if (p.name == "Hit" && p.type == AnimatorControllerParameterType.Trigger) hasHitAnim = true;
+                if (p.type == AnimatorControllerParameterType.Trigger && p.name == "Hit") hasHitAnim = true;
+                else if (p.type == AnimatorControllerParameterType.Trigger && p.name == "Punch") hasPunchAnim = true;
+                else if (p.type == AnimatorControllerParameterType.Bool && p.name == "Blocking") hasBlockAnim = true;
     }
 
     // Feeds the animator: how fast the officer walks, and whether he is aiming his gun.
@@ -130,6 +159,7 @@ public class PoliceAI : MonoBehaviour
         if (agent != null && agent.enabled && agent.isOnNavMesh) speed = agent.velocity.magnitude;
         animator.SetFloat(SpeedHash, speed, 0.1f, Time.deltaTime);
         animator.SetBool(AimingHash, currentState == State.Shooting);
+        if (hasBlockAnim) animator.SetBool(BlockingHash, enableMelee && Time.time < blockUntil && currentState != State.Captured);
     }
 
     void OnEnable() { all.Add(this); }
@@ -177,6 +207,7 @@ public class PoliceAI : MonoBehaviour
                 agent.isStopped = true;
                 agent.velocity = Vector3.zero;
             }
+            if (enableMelee && Time.time < blockUntil) FaceVampire();
             wasStaggered = true;
             return;
         }
@@ -199,6 +230,7 @@ public class PoliceAI : MonoBehaviour
 
         WatchVampire();
         if (!engaged) return;
+        if (enableMelee && HandleMelee()) return;
 
         Vector3 aim = AimPoint();
         float distance = FlatDistance(transform.position, vampire.position);
@@ -471,6 +503,8 @@ public class PoliceAI : MonoBehaviour
     public void OnCaptured(Transform biter)
     {
         StopAllCoroutines();
+        blockUntil = 0f;
+        isPunching = false;
         currentState = State.Captured;
         StopMoving();
         if (agent.enabled) agent.enabled = false;
@@ -500,11 +534,14 @@ public void TakeHit(float amount, Transform attacker)
         if (health < 0f) health = maxHealth;
 
         // A hit never kills: it only wears him down, and always leaves a little health.
+        if (enableMelee && Time.time < blockUntil) amount *= blockedDamageMultiplier; // the shield soaks most of the blow
         health = Mathf.Max(health - amount, Mathf.Min(1f, maxHealth));
 
         // Being hit makes the officer notice the vampire even if he was standing still.
         engaged = true;
         lastMoveTime = Time.time;
+        if (enableMelee && Time.time < blockUntil) return; // guard up: the blow does not make him flinch
+        isPunching = false;
 
         // Stagger: no shooting or walking while the hit reaction plays, and a small push away from the attacker.
         nextFireTime = Mathf.Max(nextFireTime, Time.time + hitStaggerTime);
@@ -554,6 +591,9 @@ public void TakeHit(float amount, Transform attacker)
     {
         if (currentState == State.Dead) return;
         StopAllCoroutines();
+        blockUntil = 0f;
+        isPunching = false;
+        if (animator != null && hasBlockAnim) animator.SetBool(BlockingHash, false);
         currentState = State.Dead;
         StopMoving();
         if (agent.enabled) agent.enabled = false;
@@ -606,5 +646,100 @@ public void TakeHit(float amount, Transform attacker)
     public void HoldForFight(float seconds)
     {
         staggerUntil = Mathf.Max(staggerUntil, Time.time + seconds);
+        if (enableMelee) ConsiderBlock(); // the vampire is about to attack him: maybe raise the shield
+    }
+    // ------------------------------------------------------------ melee & shield
+
+    /// <summary>
+    /// Fists and shield (only when enableMelee is on). Returns true while the officer is busy fighting, so the shooting logic skips this frame.
+    /// </summary>
+    bool HandleMelee()
+    {
+        // Every new action of the vampire (a swing, a bite...) may make the officer raise his guard.
+        bool vampireBusy = vampireController != null && vampireController.IsBusy && !vampireController.IsDead;
+        bool inReach = FlatDistance(transform.position, vampire.position) <= meleeRange;
+        if (vampireBusy && !wasVampireBusy && inReach) ConsiderBlock();
+        wasVampireBusy = vampireBusy;
+
+        if (Time.time < blockUntil)
+        {
+            // Guard up: he stands his ground, facing the vampire.
+            StopMoving();
+            FaceVampire();
+            currentState = State.Melee;
+            return true;
+        }
+
+        if (isPunching && Time.time < punchEndTime)
+        {
+            FaceVampire();
+            return true;
+        }
+        isPunching = false;
+
+        if (!inReach || (vampireController != null && vampireController.IsDead)) return false;
+
+        // The vampire is right in his face: fight with fists instead of backing off.
+        currentState = State.Melee;
+        hasSpot = false;
+        StopMoving();
+        FaceVampire();
+        if (Time.time >= nextMeleeTime) Punch();
+        return true;
+    }
+
+    void Punch()
+    {
+        nextMeleeTime = Time.time + meleeInterval;
+        isPunching = true;
+        punchEndTime = Time.time + punchDuration;
+        if (animator != null && hasPunchAnim)
+        {
+            animator.ResetTrigger(PunchHash);
+            animator.SetTrigger(PunchHash);
+        }
+        StartCoroutine(PunchLands());
+    }
+
+    // The fist lands a moment into the punch animation, unless the officer was hit, shielded or killed first.
+    IEnumerator PunchLands()
+    {
+        yield return new WaitForSeconds(punchHitTime);
+        if (currentState == State.Dead || currentState == State.Captured) yield break;
+        if (!isPunching || Time.time < blockUntil || Time.time < staggerUntil || IsInHitReaction()) yield break;
+        if (vampire == null || FlatDistance(transform.position, vampire.position) > meleeRange + 0.5f) yield break;
+        if (vampireController != null && vampireController.IsDead) yield break;
+        DamageVampire(meleeDamage);
+    }
+
+    /// <summary>Hurts the vampire the same way a bullet does: he flinches and loses blood (or health).</summary>
+    void DamageVampire(float amount)
+    {
+        if (vampireController != null) vampireController.OnHurt();
+        if (vampireBlood != null) vampireBlood.TakeDamage(amount);
+        else if (vampireHealth != null) vampireHealth.TakeDamage(amount);
+        else if (!warnedNoHealth)
+        {
+            warnedNoHealth = true;
+            Debug.LogWarning("The vampire has no VampireBlood or VampireHealth component, so punches and shots do no damage.", this);
+        }
+    }
+
+    /// <summary>Rolls the dice: with chance blockChance the officer raises his shield (not more often than blockCooldown).</summary>
+    void ConsiderBlock()
+    {
+        if (Time.time < nextBlockTime || Time.time < blockUntil) return;
+        nextBlockTime = Time.time + blockCooldown;
+        if (Random.value > blockChance) return;
+        StartBlock();
+    }
+
+    void StartBlock()
+    {
+        if (currentState == State.Dead || currentState == State.Captured) return;
+        blockUntil = Time.time + blockDuration;
+        nextBlockTime = blockUntil + blockCooldown;
+        isPunching = false;
+        StopMoving();
     }
 }
