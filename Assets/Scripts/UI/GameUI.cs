@@ -52,21 +52,22 @@ public class GameUI : MonoBehaviour
 
     void OnEnable()
     {
-        if (vampire != null) vampire.onEmerged.AddListener(OnVampireEmerged);
+        if (vampire != null) vampire.onEmerged.AddListener(ShowControlsCard);
     }
 
     void OnDisable()
     {
-        if (vampire != null) vampire.onEmerged.RemoveListener(OnVampireEmerged);
+        if (vampire != null) vampire.onEmerged.RemoveListener(ShowControlsCard);
     }
 
     void Start()
     {
         // No coffin intro: show the card straight away.
-        if (vampire == null || !vampire.startInCoffin) OnVampireEmerged();
+        if (vampire == null || !vampire.startInCoffin) ShowControlsCard();
     }
 
-    void OnVampireEmerged()
+    /// <summary>Shows the controls card once (called when he leaves the coffin, or by the intro cutscene).</summary>
+    public void ShowControlsCard()
     {
         if (cardShown || controlsCard == null) return;
         cardShown = true;

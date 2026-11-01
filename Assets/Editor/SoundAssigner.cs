@@ -79,6 +79,17 @@ public static class SoundAssigner
             Done(m, report);
         }
 
+        foreach (var ic in Find<IntroCutscene>())
+        {
+            Undo.RecordObject(ic, "Assign sounds");
+            Set(ref ic.newsJingle, "Cutscene", "news_jingle", missing);
+            Set(ref ic.newsVoice, "Cutscene", "news_voice", missing);
+            Set(ref ic.newsBed, "Cutscene", "news_bed", missing);
+            Set(ref ic.tvStatic, "Cutscene", "tv_static", missing);
+            Set(ref ic.coffinStinger, "Cutscene", "stinger", missing);
+            Done(ic, report);
+        }
+
         for (int i = 0; i < EditorSceneManager.sceneCount; i++) EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetSceneAt(i));
         string summary = "Updated:\n" + (report.Length > 0 ? report.ToString() : "(no sound components in the open scene)\n") +
                          (missing.Count > 0 ? "\nStill silent (no files yet):\n" + string.Join("\n", missing) : "\nEvery slot has a sound.");

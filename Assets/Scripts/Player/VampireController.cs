@@ -24,6 +24,8 @@ public class VampireController : MonoBehaviour
 {
     [Header("Movement")]
     public float moveSpeed = 6f;
+    [Tooltip("Speed multiplier while Shift is held. The run animation speeds up by the same amount.")]
+    public float sprintMultiplier = 1.6f;
     [Tooltip("How fast he turns to face where he is running (degrees per second).")]
     public float runTurnSpeed = 720f;
     [Tooltip("How fast he turns on the spot toward the mouse (degrees per second).")]
@@ -87,6 +89,11 @@ public class VampireController : MonoBehaviour
     public CoffinCheckpoint startCoffin;
     [Tooltip("Seconds before he starts rising when the level loads.")]
     public float introDelay = 0.8f;
+    [Tooltip("Seconds he takes to rise out of the coffin.")]
+    public float riseDuration = 3f;
+    /// <summary>Set by an intro cutscene before Start: he stays in the closed coffin until ReleaseFromCoffin().</summary>
+    [HideInInspector] public bool waitForCutscene;
+    public void ReleaseFromCoffin() => waitForCutscene = false;
     [Tooltip("Smoke burst played when he vanishes from the coffin and reappears in front of it.")]
     public GameObject vanishEffect;
 
@@ -111,6 +118,7 @@ public class VampireController : MonoBehaviour
     /// <summary>True while an action or coffin sequence is playing and movement is locked.</summary>
     public bool IsBusy { get; private set; }
     public bool IsRunning { get; private set; }
+    public bool IsSprinting { get; private set; }
     public bool IsGrounded => IsGroundedForActions();
     /// <summary>The human or officer he would bite if E were pressed now, or null.</summary>
     public GameObject BiteTargetInReach => biteTarget != null ? biteTarget.GameObject : null;
@@ -121,6 +129,7 @@ public class VampireController : MonoBehaviour
     static readonly int AttackHash = Animator.StringToHash("Attack");
     static readonly int HitHash = Animator.StringToHash("Hit");
     static readonly int SpeedHash = Animator.StringToHash("Speed");
+    static readonly int RunSpeedHash = Animator.StringToHash("RunSpeed");
     static readonly int TurnHash = Animator.StringToHash("Turn");
     static readonly int GroundedHash = Animator.StringToHash("IsGrounded");
     static readonly int JumpHash = Animator.StringToHash("Jump");
@@ -256,6 +265,8 @@ public class VampireController : MonoBehaviour
         Vector3 moveDir = forward * input.y + right * input.x;
         bool moving = moveDir.sqrMagnitude > 0.01f;
         IsRunning = moving;
+        IsSprinting = moving && (kb.leftShiftKey.isPressed || kb.rightShiftKey.isPressed);
+        float speed = moveSpeed * (IsSprinting ? sprintMultiplier : 1f);
 
         float turn = 0f;
         if (moving)
@@ -281,9 +292,10 @@ public class VampireController : MonoBehaviour
         }
 
         bool jumped = UpdateGravity(kb.spaceKey.wasPressedThisFrame);
-        controller.Move((moveDir * moveSpeed + Vector3.up * verticalVelocity) * Time.deltaTime);
+        controller.Move((moveDir * speed + Vector3.up * verticalVelocity) * Time.deltaTime);
 
         animator.SetFloat(SpeedHash, moving ? 1f : 0f);
+        animator.SetFloat(RunSpeedHash, speed / moveSpeed); // legs keep pace with the ground
         animator.SetFloat(TurnHash, moving ? 0f : turn, 0.05f, Time.deltaTime);
         if (turn == 0f && Mathf.Abs(animator.GetFloat(TurnHash)) < 0.01f) animator.SetFloat(TurnHash, 0f);
         UpdateJumpAnimation(jumped);
@@ -356,6 +368,8 @@ public class VampireController : MonoBehaviour
         animator.SetFloat(TurnHash, 0f);
         turningInPlace = false;
         IsRunning = false;
+        IsSprinting = false;
+        animator.SetFloat(RunSpeedHash, 1f);
     }
 
     // ---------------------------------------------------------------- bite
@@ -561,6 +575,7 @@ IEnumerator ApproachTarget(Component target)
         float stalled = 0f;
         float lastDist = float.MaxValue;
         animator.SetFloat(SpeedHash, 1f); // run animation while closing in
+        animator.SetFloat(RunSpeedHash, lungeSpeed / Mathf.Max(0.1f, moveSpeed));
         while (timeout > 0f && CanFight(target))
         {
             Vector3 to = Vector3.ProjectOnPlane(target.transform.position - transform.position, Vector3.up);
@@ -579,6 +594,7 @@ IEnumerator ApproachTarget(Component target)
             yield return null;
         }
         animator.SetFloat(SpeedHash, 0f);
+        animator.SetFloat(RunSpeedHash, 1f);
 
         if (target != null)
         {
@@ -654,11 +670,13 @@ IEnumerator ApproachTarget(Component target)
 
         yield return FloatTo(coffin.InsidePosition, coffin.InsideRotation, 0.45f, 0.7f);
 
+        SetCapeSimulated(false);
         animator.Play(LieDownState, 0, 0f);
         if (sfx != null) sfx.PlayLieDown();
         yield return WaitForState(LieDownState, 0.98f);
 
         yield return coffin.MoveLid(CoffinCheckpoint.LidState.Closed, 0.6f);
+        SetCapeVisible(false);
         yield return new WaitForSeconds(0.35f);
 
         SpawnVanishEffect(coffin.transform.position + Vector3.up * 0.5f);
@@ -671,6 +689,7 @@ IEnumerator ApproachTarget(Component target)
         SpawnVanishEffect(coffin.RespawnPosition + Vector3.up * 0.9f);
         if (sfx != null) sfx.PlayAppear();
         SetVisible(true);
+        SetCapeSimulated(true);
 
         EndSequence();
     }
@@ -682,20 +701,24 @@ IEnumerator ApproachTarget(Component target)
         SetVisible(true);
         coffin.SetLidImmediate(CoffinCheckpoint.LidState.Closed);
         PlaceAt(coffin.InsidePosition, coffin.InsideRotation);
+        SetCapeSimulated(false);
+        SetCapeVisible(false); // it pokes through the closed coffin's walls
         animator.Play(LieDownState, 0, 1f); // the lying pose
         animator.speed = 0f;
         animator.Update(0f);
         if (viewCamera != null && viewCamera.TryGetComponent(out IsometricCamera iso)) iso.SnapToTarget();
 
         yield return new WaitForSeconds(delay);
+        while (waitForCutscene) yield return null;
         yield return coffin.MoveLid(CoffinCheckpoint.LidState.Open, 0.7f);
+        SetCapeVisible(true);
 
         animator.speed = 1f;
-        animator.Play(RiseState, 0, 1f); // the lie-down clip played backwards
         if (sfx != null) sfx.PlayRise();
-        yield return WaitForRise();
+        yield return RiseRoutine();
 
         animator.Play(IdleState, 0, 0f);
+        SetCapeSimulated(true);
         yield return FloatTo(coffin.RespawnPosition, coffin.RespawnRotation, 0.5f, 0.7f);
 
         EndSequence();
@@ -744,6 +767,19 @@ IEnumerator ApproachTarget(Component target)
         transform.SetPositionAndRotation(position, rotation);
         controller.enabled = wasEnabled;
         if (capeCloth != null) capeCloth.ClearTransformMotion();
+    }
+
+    // Lying down, the simulated cape sags through the coffin; unsimulated it simply follows the body.
+    void SetCapeSimulated(bool on)
+    {
+        if (capeCloth == null) return;
+        capeCloth.enabled = on;
+        if (on) capeCloth.ClearTransformMotion();
+    }
+
+    void SetCapeVisible(bool visible)
+    {
+        if (capeCloth != null && capeCloth.TryGetComponent(out Renderer r)) r.enabled = visible;
     }
 
     void SetVisible(bool visible)
@@ -847,15 +883,19 @@ IEnumerator WaitForAction(string stateName, System.Action<float> onProgress, flo
     /// The rise plays the lie-down clip backwards. Unity still counts normalized time upward for reversed
     /// states, so wait for the state's duration instead.
     /// </summary>
-    IEnumerator WaitForRise()
+    // The rise is the lie-down clip run backwards. A negative state speed doesn't move a humanoid clip, so the
+    // "Coffin Rise" state is driven by the RiseTime parameter (Motion Time), from the lying frame (1) to standing (0).
+    static readonly int RiseTimeParam = Animator.StringToHash("RiseTime");
+
+    IEnumerator RiseRoutine()
     {
-        yield return null;
-        AnimatorStateInfo info = animator.GetCurrentAnimatorStateInfo(0);
-        float duration = info.IsName(RiseState) && info.length > 0f && info.length < 30f ? info.length : 3f;
-        float elapsed = 0f;
-        while (elapsed < duration * 0.97f && animator.GetCurrentAnimatorStateInfo(0).IsName(RiseState))
+        animator.SetFloat(RiseTimeParam, 1f);
+        animator.Play(RiseState, 0, 0f);
+        float t = 0f;
+        while (t < 1f)
         {
-            elapsed += Time.deltaTime;
+            t += Time.deltaTime / Mathf.Max(0.1f, riseDuration);
+            animator.SetFloat(RiseTimeParam, 1f - Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t))); // slow start and finish: a stiff rise
             yield return null;
         }
     }

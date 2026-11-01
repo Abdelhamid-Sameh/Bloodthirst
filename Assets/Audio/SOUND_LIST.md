@@ -63,3 +63,19 @@ Trim silence at the start of every effect (Audacity: Effect → Truncate Silence
 | File | Source / author | Link |
 |---|---|---|
 | | | |
+
+## Intro cutscene  → `Assets/Audio/Cutscene/`
+
+| File name | Source | ElevenLabs prompt / Pixabay search |
+|---|---|---|
+| `news_jingle` | PX | "breaking news intro" or "news intro sting" (3–6 s; only the first 3 s play before the anchor starts) |
+| `news_voice` | EL **Text to Speech** (not Sound Effects) | Voice Library → search "news" and pick a calm male or female anchor. Paste the script below exactly, so the subtitles match. Export mp3/wav. |
+| `news_bed` | PX | "police sirens distant" or "city night sirens" (loops quietly under the report) |
+| `tv_static` | PX / EL 1.5 s | PX "tv static"; EL "Old television white noise static burst, harsh hiss" (used when the TV turns on and when the signal cuts) |
+| `stinger` | PX / EL 3 s | PX "horror stinger" or "cinematic boom"; EL "Deep ominous horror impact with a low reverberating boom" (plays on the cut to the coffin) |
+
+Anchor script (also the subtitles, editable in IntroCutscene → News Script; if you change one, change both):
+
+> Good evening. We interrupt our programming with breaking news. Over the past few hours, coffins have been appearing throughout the city: in alleyways, in parks, and in the middle of our streets. No one has claimed responsibility. Tonight, police received an anonymous warning about what the sender calls a vampire, a creature that stays alive by biting people to death. Authorities are urging residents to stay indoors and to report anything unusual. We will bring you more on this story as it develops.
+
+The TV segment lasts as long as the voice clip (about 35 s without one), so the voice sets the pacing.

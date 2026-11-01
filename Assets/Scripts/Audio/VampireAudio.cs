@@ -10,8 +10,8 @@ public class VampireAudio : MonoBehaviour
 {
     [Header("Footsteps (played while running)")]
     public AudioClip[] footsteps;
-    [Tooltip("Seconds between steps; match it to the run cycle.")]
-    public float stepInterval = 0.32f;
+    [Tooltip("Points in the run cycle (0-1) where a foot lands; each step plays as the animation passes one, so steps follow the legs at any speed (sprint too).")]
+    public float[] footfallPhases = { 0.40f, 0.88f };
     [Range(0f, 1f)] public float footstepVolume = 0.55f;
 
     [Header("Actions")]
@@ -51,13 +51,15 @@ public class VampireAudio : MonoBehaviour
     AudioSource heartSource;
     VampireController controller;
     VampireBlood blood;
-    float stepTimer;
+    Animator animator;
+    float lastPhase = -1f;
 
     void Awake()
     {
         source = GetComponent<AudioSource>();
         stepSource = CloneSource(source);
         controller = GetComponent<VampireController>();
+        animator = GetComponentInChildren<Animator>();
         blood = GetComponent<VampireBlood>();
         if (heartbeat != null)
         {
@@ -79,18 +81,17 @@ public class VampireAudio : MonoBehaviour
     {
         UpdateHeartbeat();
         if (controller == null || GameState.Paused) return;
-        if (controller.IsRunning && controller.IsGrounded && !controller.IsBusy)
+        if (controller.IsRunning && controller.IsGrounded && !controller.IsBusy && animator != null)
         {
-            stepTimer -= Time.deltaTime;
-            if (stepTimer <= 0f)
-            {
-                PlayStep();
-                stepTimer = stepInterval;
-            }
+            float phase = Mathf.Repeat(animator.GetCurrentAnimatorStateInfo(0).normalizedTime, 1f);
+            if (lastPhase >= 0f)
+                foreach (float f in footfallPhases)
+                    if (Passed(lastPhase, phase, f)) { PlayStep(); break; }
+            lastPhase = phase;
         }
         else
         {
-            stepTimer = 0.05f; // first step lands right after he starts running
+            lastPhase = -1f;
         }
     }
 
@@ -118,6 +119,9 @@ public class VampireAudio : MonoBehaviour
     public void PlayRise() => Play(rise, actionVolume);
     public void PlayVanish() => Play(vanish, actionVolume);
     public void PlayAppear() => Play(appear, actionVolume);
+
+    // True if the cycle moved past `mark` going from `from` to `to` (handles the wrap from 1 back to 0).
+    static bool Passed(float from, float to, float mark) => from <= to ? mark > from && mark <= to : mark > from || mark <= to;
 
     // Each step cuts off the previous one, so long tails never stack into a smear.
     void PlayStep()
