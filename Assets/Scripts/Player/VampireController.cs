@@ -26,6 +26,8 @@ public class VampireController : MonoBehaviour
     public float moveSpeed = 6f;
     [Tooltip("Speed multiplier while Shift is held. The run animation speeds up by the same amount.")]
     public float sprintMultiplier = 1.6f;
+    [Tooltip("Play the hit reaction (and lose control briefly) when a bullet lands. Off: hits only cost blood.")]
+    public bool flinchOnHit = false;
     [Tooltip("How fast he turns to face where he is running (degrees per second).")]
     public float runTurnSpeed = 720f;
     [Tooltip("How fast he turns on the spot toward the mouse (degrees per second).")]
@@ -512,6 +514,7 @@ IEnumerator AttackRoutine()
     /// <summary>Hurts every living officer inside the swing's range and arc.</summary>
 void DealAttackDamage()
     {
+        if (sfx != null) sfx.PlaySwing();
         foreach (PoliceAI officer in FindObjectsByType<PoliceAI>(FindObjectsSortMode.None))
         {
             if (!officer.CanBeHit || !InSwing(officer.transform)) continue;
@@ -624,6 +627,7 @@ IEnumerator ApproachTarget(Component target)
 /// <summary>Called when something hurts him (a police bullet). He flinches, but not more often than hitReactionCooldown.</summary>
     public void OnHurt()
     {
+        if (!flinchOnHit) return; // being stun-locked by every bullet made fights unwinnable
         if (!hasHitAnim || IsDead || IsBusy || inSequence || !IsGroundedForActions()) return;
         if (Time.time < nextHitReactionTime) return;
         StartCoroutine(HitReactionRoutine());
@@ -724,6 +728,15 @@ IEnumerator ApproachTarget(Component target)
         EndSequence();
         onEmerged.Invoke();
     }
+
+    /// <summary>Hands him to a scripted sequence (the arrest): no input, no damage, no blood drain.</summary>
+    public void BeginCapture() => BeginSequence();
+
+    /// <summary>A tranquilizer dart lands: the hit flinch, without losing blood.</summary>
+    public void PlayHitReaction() { animator.ResetTrigger(HitHash); animator.SetTrigger(HitHash); }
+
+    /// <summary>He drops (the dying animation) without dying: no death event, no respawn.</summary>
+    public void Collapse() { if (hasAttackAnim) animator.ResetTrigger(AttackHash); animator.SetTrigger(DieHash); }
 
     void BeginSequence()
     {

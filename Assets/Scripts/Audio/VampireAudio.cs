@@ -24,6 +24,11 @@ public class VampireAudio : MonoBehaviour
     [Tooltip("Pain grunt when a bullet hits him.")]
     public AudioClip[] hurt;
     public AudioClip[] death;
+    [Tooltip("Whoosh for each blow of the fist combo.")]
+    public AudioClip[] swing;
+    [Tooltip("Played when a blow lands on someone.")]
+    public AudioClip[] punch;
+
     [Range(0f, 1f)] public float actionVolume = 0.9f;
 
     [Header("Coffin")]
@@ -72,8 +77,17 @@ public class VampireAudio : MonoBehaviour
         }
     }
 
-    void OnEnable() { if (blood != null) blood.Damaged += OnDamaged; }
-    void OnDisable() { if (blood != null) blood.Damaged -= OnDamaged; }
+    void OnEnable() { if (blood != null) blood.Damaged += OnDamaged; if (controller != null) controller.onHit.AddListener(OnHitSomeone); }
+    void OnDisable() { if (blood != null) blood.Damaged -= OnDamaged; if (controller != null) controller.onHit.RemoveListener(OnHitSomeone); }
+
+    float lastPunch;
+    void OnHitSomeone(GameObject victim)
+    {
+        if (Time.time - lastPunch < 0.1f) return;   // one blow hitting two people makes one sound
+        lastPunch = Time.time;
+        Play(punch, actionVolume);
+    }
+    public void PlaySwing() => Play(swing, actionVolume * 0.7f);
 
     void OnDamaged(float amount) => Play(hurt, actionVolume);
 

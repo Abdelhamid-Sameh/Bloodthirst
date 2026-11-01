@@ -76,6 +76,44 @@ Trim silence at the start of every effect (Audacity: Effect → Truncate Silence
 
 Anchor script (also the subtitles, editable in IntroCutscene → News Script; if you change one, change both):
 
-> Good evening. We interrupt our programming with breaking news. Over the past few hours, coffins have been appearing throughout the city: in alleyways, in parks, and in the middle of our streets. No one has claimed responsibility. Tonight, police received an anonymous warning about what the sender calls a vampire, a creature that stays alive by biting people to death. Authorities are urging residents to stay indoors and to report anything unusual. We will bring you more on this story as it develops.
+> Good evening. We interrupt our program with breaking news. Over the past few hours, coffins have been appearing throughout the city: in alleyways, in parks, and in the middle of our streets. No one has claimed responsibility. Tonight, police received an anonymous warning about what the sender calls a vampire. Authorities are urging residents to stay indoors and to report anything unusual. We will bring you more on this story as it develops.
 
 The TV segment lasts as long as the voice clip (about 35 s without one), so the voice sets the pacing.
+
+## New sounds (fights, police voices, arrest)
+
+The arrest shouts and police lines replace the on-screen text, so the voices carry the story now.
+For the voice lines use ElevenLabs **Text to Speech**: Voice Library → search "police" or "gruff",
+pick 2–3 different male/female voices so the officers don't all sound alike, set Stability ≈ 35 % (more shouting),
+type the line in capitals with an exclamation mark, then export mp3.
+Put a short room reverb on them in Audacity (Effect → Reverb, "Small room" or "Alley" preset at ~15 % wet) so they sit in the street.
+
+### Vampire → `Assets/Audio/Vampire/`
+
+| File name | Count | Source | ElevenLabs prompt / Pixabay search |
+|---|---|---|---|
+| `swing_01..03` | 3 | EL 0.5 s / PX | EL "Fast heavy fist swinging through air, short whoosh, no impact"; PX "punch whoosh" |
+| `punch_01..03` | 3 | EL 0.5 s / PX | EL "Hard punch landing on a body, meaty thud, close up"; PX "punch impact" |
+
+### Police → `Assets/Audio/Police/`
+
+| File name | Count | Source | Line / prompt |
+|---|---|---|---|
+| `spotted_01..04` | 4 | EL TTS | "THERE HE IS!", "SUSPECT SIGHTED! OPEN FIRE!", "FREEZE!", "IT'S HIM! TAKE HIM DOWN!" |
+| `hurt_01..03` | 3 | EL SFX 0.6 s | "Man grunts in pain after being punched, short, no words" |
+| `bitten_01..02` | 2 | EL SFX 2 s | "Man screaming in panic as he is grabbed and bitten, struggling, cut off" |
+| `death_01..02` | 2 | EL SFX 1.5 s | "Man's last choking breath, fading out" |
+
+### Arrest → `Assets/Audio/Arrest/`
+
+| File name | Source | Line / prompt |
+|---|---|---|
+| `siren` | PX | "police siren close" (3–5 s, plays when the trap springs) |
+| `shout_01` | EL TTS | "POLICE! DON'T MOVE!" |
+| `shout_02` | EL TTS (another voice) | "Surround him! Move, move!" |
+| `shout_03` | EL TTS (calm commander voice) | "Hold your fire. We take him alive." |
+| `dart` | PX / EL 0.6 s | PX "dart gun" or "air gun shot"; EL "Compressed air tranquilizer dart gun firing, sharp pfft, then a small thud" |
+| `stinger` | PX / EL 3 s | PX "dark cinematic hit"; EL "Low ominous orchestral hit with a long reverb tail, fading" |
+
+`shout_` files play in order (01, 02, 03), one after another. Leave any out and the others still play.
+After adding files run **Bloodthirst → Assign Sounds From Assets-Audio** and save the scene.

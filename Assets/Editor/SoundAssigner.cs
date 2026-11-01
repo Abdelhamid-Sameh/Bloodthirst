@@ -45,6 +45,8 @@ public static class SoundAssigner
             Set(ref v.vanish, "Vampire", "vanish", missing);
             Set(ref v.appear, "Vampire", "appear", missing);
             Set(ref v.heartbeat, "Vampire", "heartbeat", missing);
+            Set(ref v.swing, "Vampire", "swing", missing);
+            Set(ref v.punch, "Vampire", "punch", missing);
             Done(v, report);
         }
         foreach (var h in Find<HumanAudio>())
@@ -63,6 +65,15 @@ public static class SoundAssigner
             Undo.RecordObject(p, "Assign sounds");
             Set(ref p.shotSound, "Police", "gunshot", missing);
             Done(p, report);
+        }
+        foreach (var pa in Find<PoliceAudio>())
+        {
+            Undo.RecordObject(pa, "Assign sounds");
+            Set(ref pa.spotted, "Police", "spotted", missing);
+            Set(ref pa.hurt, "Police", "hurt", missing);
+            Set(ref pa.bitten, "Police", "bitten", missing);
+            Set(ref pa.death, "Police", "death", missing);
+            Done(pa, report);
         }
         foreach (var c in Find<CoffinCheckpoint>())
         {
@@ -88,6 +99,16 @@ public static class SoundAssigner
             Set(ref ic.tvStatic, "Cutscene", "tv_static", missing);
             Set(ref ic.coffinStinger, "Cutscene", "stinger", missing);
             Done(ic, report);
+        }
+
+        foreach (var ar in Find<ArrestSequence>())
+        {
+            Undo.RecordObject(ar, "Assign sounds");
+            Set(ref ar.siren, "Arrest", "siren", missing);
+            Set(ref ar.dart, "Arrest", "dart", missing);
+            Set(ref ar.stinger, "Arrest", "stinger", missing);
+            Set(ref ar.shouts, "Arrest", "shout", missing);
+            Done(ar, report);
         }
 
         for (int i = 0; i < EditorSceneManager.sceneCount; i++) EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetSceneAt(i));

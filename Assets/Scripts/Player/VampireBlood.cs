@@ -81,7 +81,8 @@ public class VampireBlood : MonoBehaviour
     /// <summary>Call from anything that hurts him (police bullets, hazards).</summary>
     public void TakeDamage(float amount)
     {
-        if (!IsActive || controller.IsDead || amount <= 0f) return;
+        // No damage while he is biting, attacking or in a coffin: committing to an action is never punished.
+        if (!IsActive || controller.IsDead || controller.IsBusy || amount <= 0f) return;
         Current = Mathf.Max(0f, Current - amount);
         Damaged?.Invoke(amount);
         if (Current <= 0f) controller.Die();

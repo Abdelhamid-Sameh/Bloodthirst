@@ -64,10 +64,10 @@ public class IntroCutscene : MonoBehaviour
     [Header("Report")]
     [TextArea(6, 14)]
     public string newsScript =
-        "Good evening. We interrupt our programming with breaking news. " +
+        "Good evening. We interrupt our program with breaking news. " +
         "Over the past few hours, coffins have been appearing throughout the city: in alleyways, in parks, and in the middle of our streets. " +
         "No one has claimed responsibility. " +
-        "Tonight, police received an anonymous warning about what the sender calls a vampire, a creature that stays alive by biting people to death. " +
+        "Tonight, police received an anonymous warning about what the sender calls a vampire. " +
         "Authorities are urging residents to stay indoors and to report anything unusual. " +
         "We will bring you more on this story as it develops.";
     [Tooltip("Reading speed used to time subtitles when there is no voice clip.")]
@@ -108,7 +108,12 @@ public class IntroCutscene : MonoBehaviour
             if (group == null) group = gameUI.gameObject.AddComponent<CanvasGroup>();
             group.alpha = 0f;
         }
-        if (gameplayCamera != null) gameplayCamera.enabled = false;
+        if (gameplayCamera != null)
+        {
+            gameplayCamera.enabled = false;
+            // Its cutaway hides the buildings around the vampire, which the news feed would show missing.
+            if (gameplayCamera.TryGetComponent(out IsometricCamera iso)) iso.enabled = false;
+        }
         cutsceneCamera.enabled = true;
         newsCamera.enabled = true;
         black.alpha = 1f;
@@ -278,7 +283,7 @@ public class IntroCutscene : MonoBehaviour
         if (gameplayCamera != null)
         {
             gameplayCamera.enabled = true;
-            if (gameplayCamera.TryGetComponent(out IsometricCamera iso)) iso.SnapToTarget();
+            if (gameplayCamera.TryGetComponent(out IsometricCamera iso)) { iso.enabled = true; iso.SnapToTarget(); }
         }
         if (music != null) music.enabled = true;
         if (gameUI != null)

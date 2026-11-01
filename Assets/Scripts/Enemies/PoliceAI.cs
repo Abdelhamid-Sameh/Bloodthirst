@@ -23,8 +23,8 @@ public class PoliceAI : MonoBehaviour
     [Header("Target")]
     [Tooltip("The vampire. Empty = the object tagged Player.")]
     public Transform vampire;
-    [Tooltip("Officers further away than this do not react to the vampire moving.")]
-    public float reactionDistance = 60f;
+    [Tooltip("Officers further away than this do not react to the vampire moving. They also need a clear line of sight to him.")]
+    public float reactionDistance = 22f;
     [Tooltip("How fast the vampire must move (units per second) to wake the officer up.")]
     public float movementThreshold = 0.3f;
     [Tooltip("Seconds the officer keeps fighting after the vampire stops moving. 0 = never stands down.")]
@@ -88,8 +88,34 @@ public class PoliceAI : MonoBehaviour
 
     static readonly List<PoliceAI> all = new List<PoliceAI>();
 
+    // Fairness: at most maxShooters officers fire at the vampire at once, each for a few seconds, then they hand over.
+    // The rest keep aiming and repositioning, so a crowd of police is a threat without being a wall of bullets.
+    public static int maxShooters = 2;
+    static readonly List<PoliceAI> shooters = new List<PoliceAI>();
+    float tokenUntil, tokenCooldownUntil;
+
+    bool TryHoldFireToken()
+    {
+        if (shooters.Contains(this))
+        {
+            if (Time.time <= tokenUntil) return true;
+            ReleaseFireToken();
+            tokenCooldownUntil = Time.time + 1.5f;
+            return false;
+        }
+        if (Time.time < tokenCooldownUntil) return false;
+        shooters.RemoveAll(s => s == null || !s.isActiveAndEnabled || s.currentState == State.Dead || s.currentState == State.Captured);
+        if (shooters.Count >= maxShooters) return false;
+        shooters.Add(this);
+        tokenUntil = Time.time + 4f;
+        return true;
+    }
+
+    void ReleaseFireToken() => shooters.Remove(this);
+
     /// <summary>False once the officer is dead.</summary>
     public bool IsAlive => currentState != State.Dead;
+    public bool IsEngaged => engaged;
     /// <summary>True if the vampire can hit this officer in a fight: not dead and not already grabbed.</summary>
     public bool CanBeHit => currentState != State.Captured && currentState != State.Dead;
     /// <summary>Health as a fraction of maxHealth (1 = untouched).</summary>
@@ -163,7 +189,7 @@ public class PoliceAI : MonoBehaviour
     }
 
     void OnEnable() { all.Add(this); }
-    void OnDisable() { all.Remove(this); }
+    void OnDisable() { all.Remove(this); ReleaseFireToken(); }
 
     void Start()
     {
@@ -246,10 +272,11 @@ public class PoliceAI : MonoBehaviour
                 hasSpot = false;
             }
             FaceVampire();
-            if (Time.time >= nextFireTime) Fire(aim);
+            if (Time.time >= nextFireTime && TryHoldFireToken()) Fire(aim);
         }
         else
         {
+            ReleaseFireToken();
             currentState = State.Moving;
             MoveToCombatSpot();
         }
@@ -268,7 +295,8 @@ public class PoliceAI : MonoBehaviour
         lastVampirePos = vampire.position;
 
         bool vampireMoving = flatDelta.magnitude / dt > movementThreshold;
-        if (vampireMoving && FlatDistance(transform.position, vampire.position) <= reactionDistance)
+        if (vampireMoving && !engaged && FlatDistance(transform.position, vampire.position) <= reactionDistance
+            && ClearShot(transform.position + Vector3.up * 1.6f, AimPoint()))   // he has to actually see him
         {
             engaged = true;
             lastMoveTime = Time.time;
@@ -424,7 +452,10 @@ public class PoliceAI : MonoBehaviour
     {
         nextFireTime = Time.time + fireInterval;
         Vector3 origin = GunPosition();
-        bool hit = Random.value <= hitChance;
+        // Harder to hit from further away, and a sprinting vampire is twice as hard to hit.
+        float chance = hitChance * Mathf.Lerp(1f, 0.5f, Mathf.InverseLerp(4f, maxCombatDistance + 6f, FlatDistance(transform.position, vampire.position)));
+        if (vampireController != null && vampireController.IsSprinting) chance *= 0.5f;
+        bool hit = Random.value <= chance;
         Vector3 end = aim;
 
         if (hit)
