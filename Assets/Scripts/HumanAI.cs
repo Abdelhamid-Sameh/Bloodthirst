@@ -59,9 +59,14 @@ private float stateTimer;
     /// <summary>False once the vampire has killed this human.</summary>
     public bool IsAlive => currentState != State.Dead;
     /// <summary>True if the vampire is allowed to grab this human.</summary>
-    public bool CanBeBitten => currentState != State.Captured && currentState != State.Dead;
+    /// <summary>True once the vampire has turned this human into his thrall (see ThrallAbility): he fights for the vampire and can no longer be hit or bitten by him.</summary>
+    public bool IsThrall { get; set; }
+    public bool CanBeBitten => currentState != State.Captured && currentState != State.Dead && !IsThrall;
     /// <summary>True if the vampire can hit this human in a fight.</summary>
     public bool CanBeHit => CanBeBitten;
+    /// <summary>Health as a fraction of maxHealth (1 = untouched). Read by EntityHealthBar.</summary>
+    public float HealthFraction => health < 0f ? 1f : Mathf.Clamp01(health / Mathf.Max(maxHealth, 0.01f));
+
 
     private void Awake()
     {

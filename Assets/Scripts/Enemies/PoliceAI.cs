@@ -117,7 +117,9 @@ public class PoliceAI : MonoBehaviour
     public bool IsAlive => currentState != State.Dead;
     public bool IsEngaged => engaged;
     /// <summary>True if the vampire can hit this officer in a fight: not dead and not already grabbed.</summary>
-    public bool CanBeHit => currentState != State.Captured && currentState != State.Dead;
+    /// <summary>True once the vampire has turned this officer into his thrall (see ThrallAbility): he fights for the vampire and can no longer be hit or bitten by him.</summary>
+    public bool IsThrall { get; set; }
+    public bool CanBeHit => currentState != State.Captured && currentState != State.Dead && !IsThrall;
     /// <summary>Health as a fraction of maxHealth (1 = untouched).</summary>
     public float HealthFraction => health < 0f ? 1f : Mathf.Clamp01(health / Mathf.Max(maxHealth, 0.01f));
     /// <summary>True once the fight has worn him down far enough for a bite to finish him.</summary>
@@ -257,6 +259,8 @@ public class PoliceAI : MonoBehaviour
         WatchVampire();
         if (!engaged) return;
         if (enableMelee && HandleMelee()) return;
+        if (TryFightThrall()) return; // THRALL: shoot at the vampire's thralls too (Shadow Bite ability)
+
 
         Vector3 aim = AimPoint();
         float distance = FlatDistance(transform.position, vampire.position);
@@ -401,7 +405,80 @@ public class PoliceAI : MonoBehaviour
         transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(look), aimTurnSpeed * Time.deltaTime);
     }
 
-    // ------------------------------------------------------------ shooting
+    // ------------------------------------------------------------ thralls (added for the Shadow Bite ability)
+
+    /// <summary>
+    /// If one of the vampire's thralls is closer than the vampire (or the vampire is out of sight), the officer shoots at the thrall instead.
+    /// Returns true while he is busy with a thrall, so the normal logic (which only knows the vampire) skips this frame.
+    /// </summary>
+    bool TryFightThrall()
+    {
+        ThrallAI thrall = ThrallAI.NearestTo(transform.position, maxCombatDistance + 3f);
+        if (thrall == null) return false;
+
+        float dThrall = FlatDistance(transform.position, thrall.transform.position);
+        float dVampire = FlatDistance(transform.position, vampire.position);
+        bool vampireInSight = dVampire <= maxCombatDistance + 1f && ClearShot(GunPosition(), AimPoint());
+        if (vampireInSight && dVampire <= dThrall) return false;   // the vampire is the nearer target: normal behaviour
+
+        Vector3 aim = thrall.AimPoint;
+        Vector3 look = thrall.transform.position - transform.position;
+        look.y = 0f;
+        bool canShoot = dThrall <= maxCombatDistance + 1f && ClearShotIgnoring(GunPosition(), aim, thrall.transform);
+        if (canShoot)
+        {
+            if (currentState != State.Shooting) { StopMoving(); currentState = State.Shooting; hasSpot = false; }
+            if (look.sqrMagnitude > 0.001f)
+                transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(look), aimTurnSpeed * Time.deltaTime);
+            if (Time.time >= nextFireTime && TryHoldFireToken()) FireAtThrall(thrall, aim);
+        }
+        else
+        {
+            ReleaseFireToken();
+            currentState = State.Moving;
+            if (agent.enabled && agent.isOnNavMesh)
+            {
+                repathTimer -= Time.deltaTime;
+                if (repathTimer <= 0f)
+                {
+                    repathTimer = 0.4f;
+                    agent.isStopped = false;
+                    agent.speed = moveSpeed;
+                    agent.SetDestination(thrall.transform.position);
+                    hasSpot = false;
+                }
+            }
+        }
+        return true;
+    }
+
+    void FireAtThrall(ThrallAI thrall, Vector3 aim)
+    {
+        nextFireTime = Time.time + fireInterval;
+        bool hit = Random.value <= hitChance;
+        Vector3 end = hit ? aim : aim + Random.onUnitSphere * 0.8f;
+        if (hit) thrall.TakeDamage(damage, transform);
+        ShowShot(GunPosition(), end);
+        if (shotSound != null) PlayShot();
+    }
+
+    /// <summary>Like ClearShot, but the thrall being shot at does not count as an obstacle.</summary>
+    bool ClearShotIgnoring(Vector3 from, Vector3 to, Transform ignore)
+    {
+        Vector3 direction = to - from;
+        float distance = direction.magnitude;
+        if (distance < 0.01f) return true;
+        foreach (RaycastHit h in Physics.RaycastAll(from, direction / distance, distance, ~0, QueryTriggerInteraction.Ignore))
+        {
+            Transform t = h.collider.transform;
+            if (t.IsChildOf(transform) || t.IsChildOf(vampire) || t.IsChildOf(ignore)) continue;
+            return false;
+        }
+        return true;
+    }
+
+    
+// ------------------------------------------------------------ shooting
 
     Vector3 GunPosition()
     {

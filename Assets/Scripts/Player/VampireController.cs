@@ -117,7 +117,14 @@ public class VampireController : MonoBehaviour
     public UnityEvent onRespawn = new UnityEvent();
 
     public bool IsDead { get; private set; }
-    /// <summary>True while an action or coffin sequence is playing and movement is locked.</summary>
+    /// <summary>True while the player is choosing a target for a special ability (ThrallAbility): the bite and fight inputs do nothing then.</summary>
+    public bool AbilityAiming { get; set; }
+    /// <summary>Locks him for a scripted ability (no input, no damage). Call EndAbility() when it is over.</summary>
+    public void BeginAbility() => BeginSequence();
+    /// <summary>Gives him control back after BeginAbility().</summary>
+    public void EndAbility() => EndSequence();
+    
+/// <summary>True while an action or coffin sequence is playing and movement is locked.</summary>
     public bool IsBusy { get; private set; }
     public bool IsRunning { get; private set; }
     public bool IsSprinting { get; private set; }
@@ -224,14 +231,14 @@ public class VampireController : MonoBehaviour
         biteTarget = grounded ? FindVictim() : null;
         CoffinInReach = grounded ? FindNearestCoffin(transform.position, coffinRange) : null;
 
-        bool bitePressed = kb.eKey.wasPressedThisFrame || (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame);
+        bool bitePressed = !AbilityAiming && (kb.eKey.wasPressedThisFrame || (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame));
         if (bitePressed && biteTarget != null)
         {
             StartCoroutine(BiteRoutine(biteTarget));
             return;
         }
 
-        bool attackPressed = kb.qKey.wasPressedThisFrame || (Mouse.current != null && Mouse.current.rightButton.wasPressedThisFrame);
+        bool attackPressed = !AbilityAiming && (kb.qKey.wasPressedThisFrame || (Mouse.current != null && Mouse.current.rightButton.wasPressedThisFrame));
         if (attackPressed && grounded && Time.time >= nextAttackTime)
         {
             StartCoroutine(AttackRoutine());
