@@ -653,7 +653,9 @@ IEnumerator ApproachTarget(Component target)
 /// <summary>Called when something hurts him (a police bullet). He flinches, but not more often than hitReactionCooldown.</summary>
     public void OnHurt()
     {
-        if (!flinchOnHit) return; // being stun-locked by every bullet made fights unwinnable
+        if (ShieldAbility.Active) return;   // Shield ability: no flinch while the bubble is up
+        
+if (!flinchOnHit) return; // being stun-locked by every bullet made fights unwinnable
         if (!hasHitAnim || IsDead || IsBusy || inSequence || !IsGroundedForActions()) return;
         if (Time.time < nextHitReactionTime) return;
         StartCoroutine(HitReactionRoutine());

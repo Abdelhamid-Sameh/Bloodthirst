@@ -9,7 +9,9 @@ using UnityEngine.AI;
 /// - Follows the vampire around.
 /// - Fights the police for him: a police thrall shoots (or punches up close), a human thrall rushes in and hits.
 ///   His blows wear enemies down like the vampire's fight does (they never kill - only a bite does).
-/// - Has real health: enemy officers shoot at him (see PoliceAI.TryFightThrall) and he keeps fighting until he is dead.
+/// - Has real health: enemy officers shoot at him (see PoliceAI.TryFightThrall), so he can die in the fight.
+/// - Is a thrall for a limited time (lifetime, 20 seconds by default). When the time is up he either dies or goes back to being
+///   an ordinary human / officer (whenTimeIsUp). His colour blinks during the last seconds as a warning.
 /// </summary>
 [DisallowMultipleComponent]
 public class ThrallAI : MonoBehaviour
@@ -49,6 +51,16 @@ public class ThrallAI : MonoBehaviour
     [Tooltip("Police thralls shoot at enemies up to this far away.")]
     public float shootRange = 9f;
 
+    [Header("Time limit")]
+    [Tooltip("How long (seconds) he stays the vampire's thrall.")]
+    public float lifetime = 20f;
+    public enum ExpireAction { Die, ReturnToNormal }
+    [Tooltip("What happens when the time is up: he dies, or he goes back to being an ordinary human / officer.")]
+    public ExpireAction whenTimeIsUp = ExpireAction.Die;
+    [Tooltip("In the last seconds his colour blinks, to warn that the spell is wearing off.")]
+    public float warnSeconds = 3f;
+
+
     [Header("Look")]
     [Tooltip("Colour multiplied onto his clothes so thralls are easy to tell apart.")]
     public Color tint = new Color(0.72f, 0.55f, 1f);
@@ -58,7 +70,7 @@ public class ThrallAI : MonoBehaviour
     NavMeshAgent agent;
     Animator animator;
     Transform vampire;
-    VampireController vampireController;
+    
     PoliceAI target;
 
     float health, maxHealth;
@@ -67,11 +79,14 @@ public class ThrallAI : MonoBehaviour
     float shootInterval = 1.2f, shootDamage = 10f, hitChance = 0.6f;
     bool aiming;
     bool hasHit, hasShoot, hasAimingParam;
-    int attackTrigger;                       // hash of the "Punch" or "Attack" trigger, 0 = none (he lunges instead)
+    int attackTrigger;                       // hash of the "Punch" (or "Attack") trigger, 0 = none
     LineRenderer tracer;
     AudioSource audioSource;
     AudioClip shotSound;
     Transform gunTransform;
+    float timeLeft;
+    bool tintOn;
+
 
     static readonly int SpeedHash = Animator.StringToHash("Speed");
     static readonly int AimingHash = Animator.StringToHash("Aiming");
@@ -79,6 +94,9 @@ public class ThrallAI : MonoBehaviour
     static readonly int HitHash = Animator.StringToHash("Hit");
 
     public bool IsAlive => alive;
+    /// <summary>Seconds left before the spell wears off.</summary>
+    public float TimeLeft => Mathf.Max(0f, timeLeft);
+
     public float HealthFraction => maxHealth > 0f ? Mathf.Clamp01(health / maxHealth) : 0f;
     /// <summary>Roughly his chest: where enemy bullets are aimed.</summary>
     public Vector3 AimPoint => transform.position + Vector3.up * 1.0f;
@@ -108,10 +126,9 @@ public class ThrallAI : MonoBehaviour
 
     // ------------------------------------------------------------------ setup
 
-    void Init(Transform vampireTransform)
+void Init(Transform vampireTransform)
     {
         vampire = vampireTransform;
-        if (vampire != null) vampireController = vampire.GetComponent<VampireController>();
         human = GetComponent<HumanAI>();
         police = GetComponent<PoliceAI>();
         agent = GetComponent<NavMeshAgent>();
@@ -139,10 +156,12 @@ public class ThrallAI : MonoBehaviour
             shotSound = police.shotSound;
             gunTransform = police.gun;
             HideOfficerEffects();
+            BuildShootingEffects();
         }
 
         maxHealth = baseHealth * healthMultiplier;
         health = maxHealth;
+        timeLeft = lifetime;
         alive = true;
         all.Add(this);
 
@@ -155,20 +174,21 @@ public class ThrallAI : MonoBehaviour
 
         if (animator != null)
         {
-            foreach (AnimatorControllerParameter p in animator.parameters)
-            {
-                if (p.type == AnimatorControllerParameterType.Trigger)
-                {
-                    if (p.name == "Hit") hasHit = true;
-                    else if (p.name == "Shoot") hasShoot = true;
-                    else if (attackTrigger == 0 && (p.name == "Punch" || p.name == "Attack")) attackTrigger = Animator.StringToHash(p.name);
-                }
-                else if (p.type == AnimatorControllerParameterType.Bool && p.name == "Aiming") hasAimingParam = true;
-            }
+            hasHit = HasParameter("Hit", AnimatorControllerParameterType.Trigger);
+            hasShoot = HasParameter("Shoot", AnimatorControllerParameterType.Trigger);
+            hasAimingParam = HasParameter("Aiming", AnimatorControllerParameterType.Bool);
+            if (HasParameter("Punch", AnimatorControllerParameterType.Trigger)) attackTrigger = Animator.StringToHash("Punch");
+            else if (HasParameter("Attack", AnimatorControllerParameterType.Trigger)) attackTrigger = Animator.StringToHash("Attack");
         }
 
-        if (police != null) BuildShootingEffects();
-        ApplyTint();
+        SetTinted(true);
+    }
+
+    bool HasParameter(string parameterName, AnimatorControllerParameterType type)
+    {
+        foreach (AnimatorControllerParameter p in animator.parameters)
+            if (p.name == parameterName && p.type == type) return true;
+        return false;
     }
 
     // The officer's own muzzle flash and tracer must not stay lit after his AI is switched off.
@@ -206,8 +226,12 @@ public class ThrallAI : MonoBehaviour
         audioSource.maxDistance = 120f;
     }
 
-    void ApplyTint()
+
+
+    /// <summary>Tints his clothes (on) or puts them back to normal (off), using a property block so the shared materials are never changed.</summary>
+    void SetTinted(bool on)
     {
+        tintOn = on;
         MaterialPropertyBlock block = new MaterialPropertyBlock();
         foreach (Renderer r in GetComponentsInChildren<Renderer>())
         {
@@ -217,6 +241,7 @@ public class ThrallAI : MonoBehaviour
             {
                 Material m = mats[i];
                 if (m == null) continue;
+                if (!on) { r.SetPropertyBlock(null, i); continue; }
                 string prop = m.HasProperty("_BaseColor") ? "_BaseColor" : (m.HasProperty("_Color") ? "_Color" : null);
                 if (prop == null) continue;
                 r.GetPropertyBlock(block, i);
@@ -233,10 +258,20 @@ public class ThrallAI : MonoBehaviour
     void Update()
     {
         if (!alive || GameState.Paused) return;
+
+        // The spell wears off. The timer only runs while the game is not paused.
+        timeLeft -= Time.deltaTime;
+        if (timeLeft <= 0f) { Expire(); return; }
+        if (timeLeft <= warnSeconds)
+        {
+            bool on = Mathf.FloorToInt(timeLeft * 4f) % 2 == 0;   // blinks four times a second
+            if (on != tintOn) SetTinted(on);
+        }
+
         if (vampire == null)
         {
             GameObject p = GameObject.FindGameObjectWithTag("Player");
-            if (p != null) { vampire = p.transform; vampireController = p.GetComponent<VampireController>(); }
+            if (p != null) vampire = p.transform;
         }
 
         if (tracer != null && tracer.enabled && Time.time >= tracerHideTime) tracer.enabled = false;
@@ -314,16 +349,12 @@ public class ThrallAI : MonoBehaviour
         StartCoroutine(MeleeRoutine(target));
     }
 
-    IEnumerator MeleeRoutine(PoliceAI victim)
+IEnumerator MeleeRoutine(PoliceAI victim)
     {
-        if (attackTrigger != 0 && animator != null)
+        if (animator != null && attackTrigger != 0)
         {
             animator.ResetTrigger(attackTrigger);
             animator.SetTrigger(attackTrigger);
-        }
-        else
-        {
-            StartCoroutine(Lunge());   // no attack animation: he throws his weight forward instead
         }
 
         yield return new WaitForSeconds(meleeHitDelay);
@@ -332,33 +363,19 @@ public class ThrallAI : MonoBehaviour
         victim.TakeHit(meleeDamage, transform);
     }
 
-    IEnumerator Lunge()
-    {
-        const float outTime = 0.1f, backTime = 0.18f, distance = 0.35f;
-        float t = 0f;
-        while (t < outTime && alive && agent != null && agent.enabled && agent.isOnNavMesh)
-        {
-            agent.Move(transform.forward * (distance / outTime) * Time.deltaTime);
-            t += Time.deltaTime;
-            yield return null;
-        }
-        t = 0f;
-        while (t < backTime && alive && agent != null && agent.enabled && agent.isOnNavMesh)
-        {
-            agent.Move(-transform.forward * (distance / backTime) * Time.deltaTime);
-            t += Time.deltaTime;
-            yield return null;
-        }
-    }
+
 
     // ---- shooting (police thralls)
 
     Vector3 MuzzlePosition() => gunTransform != null ? gunTransform.position : transform.position + Vector3.up * 1.3f + transform.forward * 0.4f;
+    /// <summary>Roughly the target's chest: where shots are aimed.</summary>
+    Vector3 EnemyChest => target.transform.position + Vector3.up * 1.0f;
+
 
     bool ClearShot()
     {
         Vector3 from = MuzzlePosition();
-        Vector3 to = target.transform.position + Vector3.up * 1.0f;
+        Vector3 to = EnemyChest;
         Vector3 dir = to - from;
         float distance = dir.magnitude;
         if (distance < 0.01f) return true;
@@ -384,7 +401,7 @@ public class ThrallAI : MonoBehaviour
 
         nextShotTime = Time.time + shootInterval;
         Vector3 origin = MuzzlePosition();
-        Vector3 aim = target.transform.position + Vector3.up * 1.0f;
+        Vector3 aim = EnemyChest;
         bool hit = Random.value <= hitChance;
         Vector3 end = hit ? aim : aim + Random.onUnitSphere * 0.8f;
         if (hit) target.TakeHit(shootDamage, transform);
@@ -451,7 +468,43 @@ public class ThrallAI : MonoBehaviour
         return Vector3.Distance(a, b);
     }
 
-    // ------------------------------------------------------------------ taking damage
+    // ------------------------------------------------------------------ the end of the spell
+
+    void Expire()
+    {
+        if (whenTimeIsUp == ExpireAction.ReturnToNormal) ReturnToNormal();
+        else Die();
+    }
+
+    /// <summary>The spell is over but he lives: he is an ordinary human / officer again, with his own AI back in charge.</summary>
+    void ReturnToNormal()
+    {
+        all.Remove(this);
+        StopAllCoroutines();
+        SetTinted(false);
+        if (tracer != null) Destroy(tracer.gameObject);
+        if (audioSource != null) Destroy(audioSource);
+        StopAgent();
+        if (agent != null && agent.enabled && agent.isOnNavMesh) agent.ResetPath();
+
+        if (human != null)
+        {
+            human.IsThrall = false;
+            human.currentState = HumanAI.State.Idle;   // he notices the vampire again and runs
+            human.enabled = true;
+        }
+        if (police != null)
+        {
+            police.IsThrall = false;
+            police.currentState = PoliceAI.State.Idle;
+            police.enabled = true;
+        }
+        enabled = false;
+        Destroy(this);
+    }
+
+    
+// ------------------------------------------------------------------ taking damage
 
     /// <summary>An enemy officer's bullet (see PoliceAI.TryFightThrall). Unlike other characters, a thrall can really die.</summary>
     public void TakeDamage(float amount, Transform attacker)

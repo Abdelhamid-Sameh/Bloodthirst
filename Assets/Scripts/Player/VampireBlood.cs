@@ -83,6 +83,7 @@ public class VampireBlood : MonoBehaviour
     {
         // No damage while he is biting, attacking or in a coffin: committing to an action is never punished.
         if (!IsActive || controller.IsDead || controller.IsBusy || amount <= 0f) return;
+        if (ShieldAbility.Absorb()) return;   // Shield ability: the bubble takes the hit
         Current = Mathf.Max(0f, Current - amount);
         Damaged?.Invoke(amount);
         if (Current <= 0f) controller.Die();

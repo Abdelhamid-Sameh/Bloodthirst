@@ -55,6 +55,7 @@ public class VampireHealth : MonoBehaviour
     public void TakeDamage(float amount)
     {
         if (IsDead || amount <= 0f) return;
+        if (ShieldAbility.Absorb()) return;   // Shield ability: the bubble takes the hit
         CurrentHealth = Mathf.Max(0f, CurrentHealth - amount);
         damageFlashTimer = 0.2f;
         onDamaged.Invoke();
