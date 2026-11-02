@@ -88,8 +88,12 @@ public class IntroCutscene : MonoBehaviour
     float staticUntil;
     float tvLightBase;
 
+    /// <summary>True from the start of the intro until the game takes over (gameplay UI hides itself meanwhile).</summary>
+    public static bool Playing { get; private set; }
+
     void Awake()
     {
+        Playing = playOnStart;
         if (!playOnStart) { gameObject.SetActive(false); return; }
         if (vampire == null) vampire = FindFirstObjectByType<VampireController>();
         // He must start in the coffin the cutscene films.
@@ -165,6 +169,7 @@ public class IntroCutscene : MonoBehaviour
     {
         if (vampire != null) vampire.onEmerged.RemoveListener(OnEmerged);
         if (staticTex != null) Destroy(staticTex);
+        Playing = false;
     }
 
     void OnEmerged() => emerged = true;
@@ -292,6 +297,7 @@ public class IntroCutscene : MonoBehaviour
             gameUI.GetComponent<CanvasGroup>().alpha = 1f;
             if (emerged) gameUI.ShowControlsCard();             // otherwise its own listener shows it when he is out
         }
+        Playing = false;
         if (tvLight != null) tvLight.enabled = false;
         foreach (var b in frozen) if (b != null) b.enabled = true;
         frozen.Clear();

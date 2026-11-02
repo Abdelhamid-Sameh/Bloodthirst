@@ -150,7 +150,7 @@ public class ArrestSequence : MonoBehaviour
         bool arrived = !agent.pathPending && agent.remainingDistance <= agent.stoppingDistance + 0.4f;
         if (anim != null)
         {
-            anim.SetFloat(SpeedHash, arrived ? 0f : agent.velocity.magnitude / Mathf.Max(0.1f, agent.speed));
+            anim.SetFloat(SpeedHash, arrived ? 0f : agent.velocity.magnitude, 0.1f, Time.deltaTime);   // metres per second, like PoliceAI
             anim.SetBool(AimingHash, arrived);
         }
         if (arrived)

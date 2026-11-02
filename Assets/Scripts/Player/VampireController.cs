@@ -483,6 +483,7 @@ IEnumerator AttackRoutine()
             SetIgnoreOfficer(officerTarget, true); // his collider would otherwise keep the fists a body-width away
         }
         if (target != null) yield return ApproachTarget(target);
+        HoldInFront(target, 1f);   // like a bite: the victim stands right in front of him, facing him
 
         if (hasAttackAnim)
         {
@@ -496,7 +497,7 @@ IEnumerator AttackRoutine()
                 if (CanFight(target))
                 {
                     FaceFlat(target.transform.position, runTurnSpeed);
-                    StepCloser(target, attackStepSpeed);
+                    HoldInFront(target, 15f * Time.deltaTime);
                 }
                 while (hitTimes != null && nextHit < hitTimes.Length && t >= hitTimes[nextHit])
                 {
@@ -613,6 +614,21 @@ IEnumerator ApproachTarget(Component target)
         }
     }
 
+    /// <summary>Keeps the fight target right in front of him, facing him, the way a bite victim is held.</summary>
+    void HoldInFront(Component target, float blend)
+    {
+        if (target == null || !CanFight(target)) return;
+        Transform victim = target.transform;
+        Vector3 want = transform.position + transform.forward * fightDistance;
+        want.y = victim.position.y;
+        Vector3 delta = (want - victim.position) * Mathf.Clamp01(blend);
+        var victimAgent = target.GetComponent<UnityEngine.AI.NavMeshAgent>();
+        if (victimAgent != null && victimAgent.enabled && victimAgent.isOnNavMesh) victimAgent.Move(delta);   // stays on walkable ground
+        else victim.position += delta;
+        Vector3 look = Vector3.ProjectOnPlane(transform.position - victim.position, Vector3.up);
+        if (look.sqrMagnitude > 0.0001f) victim.rotation = Quaternion.LookRotation(look);
+    }
+
     /// <summary>Steps toward the target if it has drifted further than fightDistance, so the blows keep landing at arm's length.</summary>
     void StepCloser(Component target, float speed)
     {
@@ -721,11 +737,11 @@ IEnumerator ApproachTarget(Component target)
 
         yield return new WaitForSeconds(delay);
         while (waitForCutscene) yield return null;
+        if (sfx != null) sfx.PlayRise();   // its creak belongs to the lid opening, not after it
         yield return coffin.MoveLid(CoffinCheckpoint.LidState.Open, 0.7f);
         SetCapeVisible(true);
 
         animator.speed = 1f;
-        if (sfx != null) sfx.PlayRise();
         yield return RiseRoutine();
 
         animator.Play(IdleState, 0, 0f);

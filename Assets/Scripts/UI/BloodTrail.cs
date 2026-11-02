@@ -1,8 +1,11 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
 
 /// A trail of glowing chevrons on the ground, along the walkable path from the vampire to where he should go:
-/// the police station normally, the nearest living human (brighter and pulsing faster) when he is starving.
+/// the police station normally, the nearest living human (brighter, pulsing) when he is starving.
+/// The chevrons flow forward continuously and the trail starts at his feet every frame, so it never pops when
+/// the path is recalculated; colour changes and appearing/disappearing are cross-faded.
 public class BloodTrail : MonoBehaviour
 {
     public VampireController vampire;
@@ -13,20 +16,24 @@ public class BloodTrail : MonoBehaviour
     public float objectiveReachedDistance = 12f;
 
     [Header("Look")]
+    public Material material;
     public float length = 18f;
     public float spacing = 2.2f;
     public float startAhead = 1.6f;
-    public float chevronSize = 0.9f;
-    public Color guideColor = new Color(0.75f, 0.05f, 0.05f, 0.45f);
+    public float chevronSize = 1.2f;
+    [Tooltip("Metres per second the chevrons drift toward the target.")]
+    public float flowSpeed = 1.2f;
+    public Color guideColor = new Color(0.85f, 0.06f, 0.05f, 0.7f);
     public Color hungerColor = new Color(1f, 0.15f, 0.08f, 0.9f);
     [Range(0f, 1f)] public float hungerBelow = 0.45f;
 
     NavMeshPath path;
+    readonly List<Vector3> corners = new List<Vector3>();
+    readonly List<Vector3> line = new List<Vector3>();
     Mesh mesh;
-    public Material material;
     MaterialPropertyBlock block;
-    float nextRepath;
-    bool hungry;
+    float nextRepath, visibility, hungerBlend, flow;
+    bool hasTarget;
     static readonly int ColorId = Shader.PropertyToID("_Color");
 
     void Awake()
@@ -41,50 +48,79 @@ public class BloodTrail : MonoBehaviour
 
     void Update()
     {
-        if (vampire == null || blood == null || !blood.IsActive) return;
+        if (vampire == null || blood == null) return;
+        bool active = blood.IsActive;
         Vector3 me = vampire.transform.position;
+        bool hungry = active && blood.Fraction < hungerBelow;
 
-        if (Time.time >= nextRepath)
+        if (active && Time.time >= nextRepath)
         {
-            nextRepath = Time.time + 0.4f;
-            hungry = blood.Fraction < hungerBelow;
+            nextRepath = Time.time + 0.3f;
             Vector3? target = hungry ? NearestPrey(me) : (Vector3?)null;
             if (target == null && objective != null && Flat(objective.position - me) > objectiveReachedDistance) target = objective.position;
-            path.ClearCorners();
-            if (target != null && NavMesh.SamplePosition(me, out var a, 2f, NavMesh.AllAreas) && NavMesh.SamplePosition(target.Value, out var b, 4f, NavMesh.AllAreas))
-                NavMesh.CalculatePath(a.position, b.position, NavMesh.AllAreas, path);
+            hasTarget = target != null;
+            // A failed query (mid-jump, say) keeps the last good path instead of blinking the trail off.
+            if (hasTarget && NavMesh.SamplePosition(me, out var a, 2f, NavMesh.AllAreas) && NavMesh.SamplePosition(target.Value, out var b, 4f, NavMesh.AllAreas)
+                && NavMesh.CalculatePath(a.position, b.position, NavMesh.AllAreas, path) && path.corners.Length >= 2)
+            {
+                corners.Clear();
+                corners.AddRange(path.corners);
+            }
         }
-        Draw();
+
+        bool show = active && hasTarget && corners.Count >= 2;
+        visibility = Mathf.MoveTowards(visibility, show ? 1f : 0f, Time.deltaTime * 2.5f);
+        hungerBlend = Mathf.MoveTowards(hungerBlend, hungry ? 1f : 0f, Time.deltaTime * 2f);
+        flow = Mathf.Repeat(flow + Time.deltaTime * Mathf.Lerp(flowSpeed, flowSpeed * 2.5f, hungerBlend), spacing);
+        if (visibility > 0f && corners.Count >= 2) Draw(me);
     }
 
-    void Draw()
+    void Draw(Vector3 me)
     {
-        var corners = path.corners;
-        if (corners.Length < 2) return;
-        Color baseColor = hungry ? hungerColor : guideColor;
-        float speed = hungry ? 9f : 4f;
-        float walked = 0f, next = startAhead;
-        for (int i = 1; i < corners.Length && next < length; i++)
+        // The trail starts where he stands now: his projection onto the path, then the rest of the corners.
+        int seg = 0; Vector3 start = corners[0]; float best = float.MaxValue;
+        for (int i = 1; i < corners.Count; i++)
         {
-            Vector3 a = corners[i - 1], b = corners[i];
-            float seg = Vector3.Distance(a, b);
-            Vector3 dir = seg > 0.001f ? (b - a) / seg : Vector3.forward;
-            dir.y = 0f;
-            if (dir.sqrMagnitude < 0.0001f) { walked += seg; continue; }
+            Vector3 p = ClosestOnSegment(corners[i - 1], corners[i], me);
+            float d = Flat(p - me);
+            if (d < best) { best = d; seg = i; start = p; }
+        }
+        line.Clear();
+        line.Add(start);
+        for (int i = seg; i < corners.Count; i++) line.Add(corners[i]);
+        if (line.Count < 2) return;
+
+        float pulse = 1f - hungerBlend * 0.35f * (0.5f + 0.5f * Mathf.Sin(Time.time * 7f));
+        Color baseColor = Color.Lerp(guideColor, hungerColor, hungerBlend);
+        float next = startAhead + flow, walked = 0f;
+        for (int i = 1; i < line.Count && next < length; i++)
+        {
+            Vector3 a = line[i - 1], b = line[i];
+            float segLen = Flat(b - a);
+            if (segLen < 0.001f) continue;
+            Vector3 dir = b - a; dir.y = 0f;
             var rot = Quaternion.LookRotation(dir.normalized, Vector3.up);
-            while (next <= walked + seg && next < length)
+            while (next <= walked + segLen && next < length)
             {
-                Vector3 p = Vector3.Lerp(a, b, (next - walked) / seg) + Vector3.up * 0.06f;
-                // A pulse runs along the trail toward the target; chevrons fade in near him and out at the far end.
-                float wave = 0.45f + 0.55f * Mathf.Max(0f, Mathf.Sin((next - Time.time * speed) * 0.6f));
-                float ends = Mathf.Clamp01((next - startAhead) / 2f + 0.3f) * Mathf.Clamp01((length - next) / 5f);
-                var c = baseColor; c.a *= wave * ends;
+                Vector3 p = Vector3.Lerp(a, b, (next - walked) / segLen) + Vector3.up * 0.06f;
+                // Fade in near his feet and out at the far end, so chevrons slide in and out instead of popping.
+                float ends = Mathf.Clamp01((next - startAhead) / 1.5f) * Mathf.Clamp01((length - next) / 4f);
+                var c = baseColor; c.a *= ends * visibility * pulse;
                 block.SetColor(ColorId, c);
                 Graphics.DrawMesh(mesh, Matrix4x4.TRS(p, rot, Vector3.one * chevronSize), material, 0, null, 0, block, false, false);
                 next += spacing;
             }
-            walked += seg;
+            walked += segLen;
         }
+    }
+
+    static Vector3 ClosestOnSegment(Vector3 a, Vector3 b, Vector3 p)
+    {
+        Vector3 ab = b - a; ab.y = 0f;
+        float len2 = ab.sqrMagnitude;
+        if (len2 < 0.0001f) return a;
+        Vector3 ap = p - a; ap.y = 0f;
+        return Vector3.Lerp(a, b, Mathf.Clamp01(Vector3.Dot(ap, ab) / len2));
     }
 
     Vector3? NearestPrey(Vector3 me)

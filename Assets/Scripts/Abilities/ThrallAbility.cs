@@ -132,6 +132,7 @@ void OnDestroy()
         if (!uiShown && !controller.IsBusy && !controller.IsDead && Time.timeSinceLevelLoad > 2f) uiShown = true;
         if (Time.timeScale > 0f) cooldownRemaining = Mathf.Max(0f, cooldownRemaining - Time.deltaTime);
         UpdateUI();
+        if (IntroCutscene.Playing) return;   // no Shadow Bite before the game has started
 
         if (GameState.Paused)
         {
@@ -681,7 +682,7 @@ void ShowAimVisuals(bool show)
     void UpdateUI()
     {
         if (uiGroup == null) return;
-        uiGroup.alpha = Mathf.MoveTowards(uiGroup.alpha, uiShown && !GameState.Paused ? 1f : 0f, Time.unscaledDeltaTime * 3f);
+        uiGroup.alpha = Mathf.MoveTowards(uiGroup.alpha, uiShown && !GameState.Paused && !IntroCutscene.Playing ? 1f : 0f, Time.unscaledDeltaTime * 3f);
 
         bool aiming = mode == Mode.Aiming;
         bool onCooldown = cooldownRemaining > 0f;
