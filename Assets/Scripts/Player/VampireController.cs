@@ -398,6 +398,9 @@ public class VampireController : MonoBehaviour
         public void Kill() { if (human != null) human.OnKilled(); else if (officer != null) officer.Die(); }
     }
 
+    /// <summary>Bites this human at once, wherever he stands (Blood Leap, after landing next to him). Feeds like a normal bite.</summary>
+    public Coroutine BiteHuman(HumanAI human) => StartCoroutine(BiteRoutine(new BiteTarget(human)));
+
     BiteTarget FindVictim()
     {
         BiteTarget best = null;
