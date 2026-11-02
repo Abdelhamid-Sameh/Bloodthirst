@@ -88,6 +88,16 @@ public class VampireBlood : MonoBehaviour
         if (Current <= 0f) controller.Die();
     }
 
+    /// <summary>Deadly damage that ignores the usual protection while he is busy (the arrest's last tranquilizer dart).</summary>
+    public void TakeLethalDamage()
+    {
+        if (controller.IsDead) return;
+        float amount = Mathf.Max(1f, Current);
+        Current = 0f;
+        Damaged?.Invoke(amount);   // hurt sound and the bar's hit effects
+        controller.Die();          // the regular death: animation, death sound, bars fold
+    }
+
     void OnEmerged()
     {
         Current = maxBlood;

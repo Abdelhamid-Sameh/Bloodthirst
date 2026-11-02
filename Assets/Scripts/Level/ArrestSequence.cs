@@ -132,7 +132,10 @@ public class ArrestSequence : MonoBehaviour
             float w = i == 0 ? 1.1f : 0.6f;
             while ((w -= Time.deltaTime) > 0f) { foreach (var agent in ring) UpdateOfficer(agent); yield return null; }
         }
-        vampire.Collapse();
+        // The last dart is lethal: the regular death plays every time (Collapse alone could be swallowed by the busy state).
+        vampire.debugKeys = false;   // no "R: rise again" over the end card
+        var blood = vampire.GetComponent<VampireBlood>();
+        if (blood != null) blood.TakeLethalDamage(); else vampire.Die();
         if (stinger != null) sfx.PlayOneShot(stinger, 0.9f);
         float fall = 2.2f;
         while ((fall -= Time.deltaTime) > 0f) { foreach (var agent in ring) UpdateOfficer(agent); yield return null; }
