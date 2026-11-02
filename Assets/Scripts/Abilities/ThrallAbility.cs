@@ -13,7 +13,8 @@ using UnityEngine.UI;
 ///    human and officer inside it is marked on the ground.
 /// 2. Move the cursor over one of them: a straight line of black dust shows the path to him.
 /// 3. Left-click: the vampire turns to black dust, streaks along that line, appears next to the target and bites him.
-///    The victim becomes his thrall (see ThrallAI) and fights for him until he is dead.
+///    The victim becomes his thrall (see ThrallAI) and fights for him for a limited time (20 seconds by default); then he dies
+///    or goes back to normal, as set on ThrallAI.whenTimeIsUp.
 ///
 /// Right click, Esc, T or the button again cancel. The component is added to the vampire automatically when the game
 /// starts (ThrallAbilityInstaller below), so nothing has to be set up in the scene.
@@ -669,8 +670,8 @@ void ShowAimVisuals(bool show)
                              new Vector2(1f, 1f), new Vector2(0.5f, 0.5f), new Vector2(-8f, -8f), new Vector2(70f, 30f), 0f);
 
         // Name above the button.
-        MakeText(uiRoot.transform, "Label", "SHADOW BITE", 22, new Color(0.82f, 0.72f, 1f, 0.9f), TextAlignmentOptions.Center,
-                 new Vector2(1f, 0f), new Vector2(0.5f, 0f), new Vector2(-132f, 204f), new Vector2(300f, 34f), 8f);
+        MakeText(uiRoot.transform, "Label", "SHADOW BITE", 18, new Color(0.82f, 0.72f, 1f, 0.9f), TextAlignmentOptions.Center,
+                 new Vector2(1f, 0f), new Vector2(0.5f, 0f), new Vector2(-132f, 204f), new Vector2(300f, 34f), 5f);
 
         // Hint while aiming.
         hintText = MakeText(uiRoot.transform, "Hint", "Choose a target     Left click: Shadow Bite     Right click / " + hotkey + ": cancel", 26,
@@ -688,7 +689,18 @@ void ShowAimVisuals(bool show)
         bool onCooldown = cooldownRemaining > 0f;
         bool full = ActiveThralls >= maxThralls;
         cooldownImage.fillAmount = cooldown > 0f ? cooldownRemaining / cooldown : 0f;
-        cooldownText.text = onCooldown ? Mathf.CeilToInt(cooldownRemaining).ToString() : "";
+        ThrallAI active = ActiveThralls > 0 ? ThrallAI.All[0] : null;
+        if (onCooldown)
+        {
+            cooldownText.text = Mathf.CeilToInt(cooldownRemaining).ToString();
+            cooldownText.color = Color.white;
+        }
+        else if (active != null)
+        {
+            cooldownText.text = Mathf.CeilToInt(active.TimeLeft).ToString();   // seconds the thrall has left
+            cooldownText.color = new Color(0.85f, 0.7f, 1f, 1f);
+        }
+        else cooldownText.text = "";
         countText.text = ActiveThralls + "/" + maxThralls;
         hintText.gameObject.SetActive(aiming);
 
@@ -699,14 +711,14 @@ void ShowAimVisuals(bool show)
         ringImage.color = ring;
     }
 
-    static GameObject NewUI(string objectName, Transform parent)
+    internal static GameObject NewUI(string objectName, Transform parent)
     {
         GameObject go = new GameObject(objectName, typeof(RectTransform));
         go.transform.SetParent(parent, false);
         return go;
     }
 
-    static Image AddChildImage(Transform parent, string objectName, Sprite sprite, Color color, Vector2 size)
+    internal static Image AddChildImage(Transform parent, string objectName, Sprite sprite, Color color, Vector2 size)
     {
         GameObject go = NewUI(objectName, parent);
         RectTransform rt = go.GetComponent<RectTransform>();
@@ -720,7 +732,7 @@ void ShowAimVisuals(bool show)
         return img;
     }
 
-    static TMP_Text MakeText(Transform parent, string objectName, string text, float size, Color color, TextAlignmentOptions align,
+    internal static TMP_Text MakeText(Transform parent, string objectName, string text, float size, Color color, TextAlignmentOptions align,
                              Vector2 anchor, Vector2 pivot, Vector2 position, Vector2 sizeDelta, float spacing)
     {
         GameObject go = NewUI(objectName, parent);
@@ -744,7 +756,7 @@ void ShowAimVisuals(bool show)
     // ------------------------------------------------------------------ creepy range helpers
 
     /// <summary>The usual smoothstep: 0 below edge0, 1 above edge1, a smooth curve between. (Mathf.SmoothStep is something different.)</summary>
-    static float Smooth(float edge0, float edge1, float x)
+    internal static float Smooth(float edge0, float edge1, float x)
     {
         float t = Mathf.Clamp01((x - edge0) / (edge1 - edge0));
         return t * t * (3f - 2f * t);
@@ -889,7 +901,7 @@ void ShowAimVisuals(bool show)
     
 // ------------------------------------------------------------------ generated textures
 
-    static Texture2D NewTexture(int w, int h)
+    internal static Texture2D NewTexture(int w, int h)
     {
         Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
         tex.wrapMode = TextureWrapMode.Clamp;
@@ -898,7 +910,7 @@ void ShowAimVisuals(bool show)
     }
 
     /// <summary>A white disc (inner = 0) or ring (inner &gt; 0), with soft edges. outer and inner are fractions of the size.</summary>
-    static Sprite MakeCircleSprite(int size, float outer, float inner)
+    internal static Sprite MakeCircleSprite(int size, float outer, float inner)
     {
         Texture2D tex = NewTexture(size, size);
         Color32[] px = new Color32[size * size];
@@ -983,7 +995,7 @@ void ShowAimVisuals(bool show)
     }
 
     /// <summary>A soft round puff for the dust particles.</summary>
-    static Texture2D MakeBlobTexture(int size)
+    internal static Texture2D MakeBlobTexture(int size)
     {
         Texture2D tex = NewTexture(size, size);
         Color32[] px = new Color32[size * size];
@@ -1002,7 +1014,7 @@ void ShowAimVisuals(bool show)
     }
 }
 
-/// <summary>Adds the Shadow Bite ability to the vampire when the game starts, so no scene needs changing.</summary>
+/// <summary>Adds the Shadow Bite and Shield abilities to the vampire when the game starts, so no scene needs changing.</summary>
 public class ThrallAbilityInstaller : MonoBehaviour
 {
     float nextScan;
@@ -1021,6 +1033,8 @@ public class ThrallAbilityInstaller : MonoBehaviour
         if (Time.unscaledTime < nextScan) return;
         nextScan = Time.unscaledTime + 1f;
         VampireController vampire = FindFirstObjectByType<VampireController>();
-        if (vampire != null && vampire.GetComponent<ThrallAbility>() == null) vampire.gameObject.AddComponent<ThrallAbility>();
+        if (vampire == null) return;
+        if (vampire.GetComponent<ThrallAbility>() == null) vampire.gameObject.AddComponent<ThrallAbility>();
+        if (vampire.GetComponent<ShieldAbility>() == null) vampire.gameObject.AddComponent<ShieldAbility>();
     }
 }
