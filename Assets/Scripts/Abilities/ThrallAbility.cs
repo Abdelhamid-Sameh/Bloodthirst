@@ -26,7 +26,7 @@ public class ThrallAbility : MonoBehaviour
 
     [Header("Ability")]
     [Tooltip("Key that starts or cancels aiming (the button at the bottom right does the same).")]
-    public Key hotkey = Key.T;
+    public Key hotkey = Key.Digit3;
     [Tooltip("How far around the vampire a target can be (metres).")]
     public float range = 10f;
     [Tooltip("Seconds before the ability can be used again.")]
@@ -75,7 +75,12 @@ public class ThrallAbility : MonoBehaviour
     GameObject uiRoot;
     CanvasGroup uiGroup;
     Image ringImage, cooldownImage;
-    TMP_Text cooldownText, countText, keyText, hintText;
+    TMP_Text cooldownText, countText, keyText, costText;
+    Image iconImage;
+    CanvasGroup aimPrompt;
+    RectTransform buttonRect;
+    Vector2 buttonRest;
+    float shakeUntil;
 
     const int RingPoints = 96;
     const int TargetRingPoints = 40;
@@ -84,7 +89,11 @@ public class ThrallAbility : MonoBehaviour
     // Blood Leap (BloodLeapAbility) reuses this whole ability and overrides only these.
 
     protected virtual string Title => "SHADOW BITE";
-    protected virtual float ButtonOffsetX => 0f;
+    protected virtual string AimSubtitle => "Pick a human or officer inside the ring to turn";
+    protected virtual int Slot => 2;               // top of the ability triangle (AbilityHUD)
+    protected virtual float ManaCost => 50f;
+    protected virtual Sprite MakeIcon() => MakeIconSprite(128);
+    protected virtual bool ShowsThrallTimer => true;
     protected virtual Color IconTint => Color.white;
     protected virtual Color PoolGlow => new Color(0.55f, 0.14f, 0.85f);
     protected virtual Color DustColor => new Color(0.18f, 0.05f, 0.30f, 0.85f);
@@ -178,6 +187,12 @@ void OnDestroy()
         if (cooldownRemaining > 0f || AtCapacity)
         {
             flashUntil = Time.unscaledTime + 0.35f;   // the ring blinks red: not ready
+            return;
+        }
+        if (!VampireMana.CanAfford(ManaCost))
+        {
+            flashUntil = shakeUntil = Time.unscaledTime + 0.35f;   // red ring + shake; the mana wing blinks and a toast explains
+            VampireMana.ReportNotEnough(ManaCost);
             return;
         }
         mode = Mode.Aiming;
@@ -308,6 +323,7 @@ void UpdateAiming(Mouse mouse)
 
     void StartCast(Transform target)
     {
+        if (!VampireMana.TrySpend(ManaCost)) { CancelAiming(); flashUntil = shakeUntil = Time.unscaledTime + 0.35f; return; }
         mode = Mode.Casting;
         controller.AbilityAiming = false;
         hovered = null;
@@ -652,8 +668,10 @@ void ShowAimVisuals(bool show)
         GameObject button = NewUI("ShadowBiteButton", uiRoot.transform);
         RectTransform brt = button.GetComponent<RectTransform>();
         brt.anchorMin = brt.anchorMax = brt.pivot = new Vector2(1f, 0f);
-        brt.anchoredPosition = new Vector2(-70f + ButtonOffsetX, 70f);
+        brt.anchoredPosition = buttonRest = AbilityHUD.SlotPosition(Slot);
         brt.sizeDelta = new Vector2(124f, 124f);
+        brt.localScale = Vector3.one * AbilityHUD.ButtonScale;
+        buttonRect = brt;
         Image bg = button.AddComponent<Image>();
         bg.sprite = disc256;
         bg.color = new Color(0.05f, 0.04f, 0.09f, 0.92f);
@@ -666,7 +684,7 @@ void ShowAimVisuals(bool show)
         btn.onClick.AddListener(ToggleAiming);
 
         ringImage = AddChildImage(button.transform, "Ring", ring256, accent, new Vector2(124f, 124f));
-        AddChildImage(button.transform, "Icon", MakeIconSprite(128), IconTint, new Vector2(86f, 86f));
+        iconImage = AddChildImage(button.transform, "Icon", MakeIcon(), IconTint, new Vector2(86f, 86f));
         cooldownImage = AddChildImage(button.transform, "Cooldown", disc256, new Color(0f, 0f, 0f, 0.7f), new Vector2(118f, 118f));
         cooldownImage.type = Image.Type.Filled;
         cooldownImage.fillMethod = Image.FillMethod.Radial360;
@@ -682,22 +700,16 @@ void ShowAimVisuals(bool show)
         crt.anchorMin = crt.anchorMax = new Vector2(0f, 0f);
         crt.anchoredPosition = new Vector2(12f, 12f);
         AddChildImage(cap.transform, "KeyCapRing", ring256, accent, new Vector2(40f, 40f));
-        keyText = MakeText(cap.transform, "KeyText", hotkey.ToString(), 24, Color.white, TextAlignmentOptions.Center,
+        keyText = MakeText(cap.transform, "KeyText", AbilityHUD.KeyLabel(hotkey), 24, Color.white, TextAlignmentOptions.Center,
                            new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(40f, 40f), 0f);
 
-        // How many thralls are alive, top right of the button.
-        countText = MakeText(button.transform, "CountText", CountLabel, 22, new Color(0.85f, 0.75f, 1f, 0.95f), TextAlignmentOptions.Center,
-                             new Vector2(1f, 1f), new Vector2(0.5f, 0.5f), new Vector2(-8f, -8f), new Vector2(70f, 30f), 0f);
+        // How many thralls are alive (top left) and the mana cost (top right).
+        countText = MakeText(button.transform, "CountText", CountLabel, 20, new Color(0.85f, 0.75f, 1f, 0.95f), TextAlignmentOptions.Center,
+                             new Vector2(0f, 1f), new Vector2(0.5f, 0.5f), new Vector2(10f, -8f), new Vector2(60f, 30f), 0f);
+        costText = AbilityHUD.AddCostBadge(button.transform, ManaCost);
 
-        // Name above the button.
-        MakeText(uiRoot.transform, "Label", "SHADOW BITE", 18, new Color(0.82f, 0.72f, 1f, 0.9f), TextAlignmentOptions.Center,
-                 new Vector2(1f, 0f), new Vector2(0.5f, 0f), new Vector2(-132f, 204f), new Vector2(300f, 34f), 5f);
-
-        // Hint while aiming.
-        hintText = MakeText(uiRoot.transform, "Hint", "Choose a target     Left click: " + Title + "     Right click / " + hotkey + ": cancel", 26,
-                            new Color(1f, 1f, 1f, 0.92f), TextAlignmentOptions.Right,
-                            new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-70f, 246f), new Vector2(1000f, 40f), 0f);
-        hintText.gameObject.SetActive(false);
+        // The prompt while choosing a target (names live in the controls guide and here, not under the buttons).
+        aimPrompt = AbilityHUD.BuildAimPrompt(uiRoot.transform, accent, Title, AimSubtitle, System.Globalization.CultureInfo.InvariantCulture.TextInfo.ToTitleCase(Title.ToLower()), hotkey);
     }
 
     void UpdateUI()
@@ -709,7 +721,7 @@ void ShowAimVisuals(bool show)
         bool onCooldown = cooldownRemaining > 0f;
         bool full = AtCapacity;
         cooldownImage.fillAmount = cooldown > 0f ? cooldownRemaining / cooldown : 0f;
-        ThrallAI active = ActiveThralls > 0 ? ThrallAI.All[0] : null;
+        ThrallAI active = ShowsThrallTimer && ActiveThralls > 0 ? ThrallAI.All[0] : null;
         if (onCooldown)
         {
             cooldownText.text = Mathf.CeilToInt(cooldownRemaining).ToString();
@@ -721,12 +733,15 @@ void ShowAimVisuals(bool show)
             cooldownText.color = new Color(0.85f, 0.7f, 1f, 1f);
         }
         else cooldownText.text = "";
-        countText.text = ActiveThralls + "/" + maxThralls;
-        hintText.gameObject.SetActive(aiming);
+        countText.text = CountLabel;
+        aimPrompt.alpha = Mathf.MoveTowards(aimPrompt.alpha, aiming ? 1f : 0f, Time.unscaledDeltaTime * 6f);
+        bool affordable = VampireMana.CanAfford(ManaCost);
+        AbilityHUD.ShowAffordable(iconImage, costText, affordable);
+        buttonRect.anchoredPosition = buttonRest + AbilityHUD.Shake(shakeUntil);
 
         Color ring = accent;
         if (aiming) ring = Color.Lerp(accent, Color.white, 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 6f));
-        else if (onCooldown || full || controller.IsDead) ring = new Color(0.4f, 0.38f, 0.45f, 1f);
+        else if (onCooldown || full || !affordable || controller.IsDead) ring = new Color(0.4f, 0.38f, 0.45f, 1f);
         if (Time.unscaledTime < flashUntil) ring = new Color(1f, 0.2f, 0.25f, 1f);
         ringImage.color = ring;
     }
@@ -985,7 +1000,7 @@ void ShowAimVisuals(bool show)
         return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f);
     }
 
-    static bool InTriangle(Vector2 p, Vector2[] t)
+    protected static bool InTriangle(Vector2 p, Vector2[] t)
     {
         float d1 = Sign(p, t[0], t[1]), d2 = Sign(p, t[1], t[2]), d3 = Sign(p, t[2], t[0]);
         bool neg = d1 < 0f || d2 < 0f || d3 < 0f;
@@ -1053,9 +1068,14 @@ public class ThrallAbilityInstaller : MonoBehaviour
     nextScan = Time.unscaledTime + 1f;
     VampireController vampire = FindFirstObjectByType<VampireController>();
     if (vampire == null) return;
-    Ensure<ThrallAbility>(vampire);
+    // Shadow Bite needs an exact type check: Blood Leap is a ThrallAbility too.
+    bool hasShadowBite = false;
+    foreach (ThrallAbility a in vampire.GetComponents<ThrallAbility>()) if (a.GetType() == typeof(ThrallAbility)) hasShadowBite = true;
+    if (!hasShadowBite) vampire.gameObject.AddComponent<ThrallAbility>();
     Ensure<ShieldAbility>(vampire);
     Ensure<BloodLeapAbility>(vampire);
+    Ensure<VampireMana>(vampire);
+    AbilityHUD.EnsureToast();
 }
 
 static void Ensure<T>(VampireController vampire) where T : Component

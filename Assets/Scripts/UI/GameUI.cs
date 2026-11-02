@@ -115,7 +115,7 @@ public class GameUI : MonoBehaviour
             {
                 if (vampire.debugKeys) { key = "R"; label = "Rise again"; }
             }
-            else if (!vampire.IsBusy)
+            else if (!vampire.IsBusy && !vampire.AbilityAiming)   // the ability prompt takes over while aiming
             {
                 if (vampire.BiteTargetInReach != null) { key = "E"; label = "Bite"; }
                 else if (vampire.CoffinInReach != null) { key = "F"; label = "Rest in coffin"; }

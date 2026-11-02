@@ -4,7 +4,8 @@ using UnityEngine.UI;
 
 /// <summary>
 /// The mana bar: the blue vertical bat wing to the left of the head icon (its sheet mirrors the health wing, so the two frame the head).
-/// It unfolds and folds together with the blood bar. Not linked to the abilities yet: call SetMana(0..1) to drive it.
+/// It unfolds and folds together with the blood bar and follows VampireMana (or SetMana(0..1) without it).
+/// When an ability is refused for lack of mana the wing blinks red.
 /// A drop in mana plays the mana sparkle VFX; a gain pours in.
 /// </summary>
 public class ManaBarUI : MonoBehaviour
@@ -27,7 +28,7 @@ public class ManaBarUI : MonoBehaviour
 
     [Range(0f, 1f)] public float mana = 1f;
 
-    float shown = 1f, vfxTime = -1f;
+    float shown = 1f, vfxTime = -1f, blinkUntil;
     Coroutine routine;
     const float FoldedScale = 0.03f;
 
@@ -47,12 +48,20 @@ public class ManaBarUI : MonoBehaviour
         SetBar(FoldedScale);
     }
 
-    void OnEnable() { if (blood != null) { blood.Activated += Unfurl; blood.Deactivated += Fold; } }
-    void OnDisable() { if (blood != null) { blood.Activated -= Unfurl; blood.Deactivated -= Fold; } }
+    void OnEnable() { if (blood != null) { blood.Activated += Unfurl; blood.Deactivated += Fold; } VampireMana.NotEnough += OnNotEnough; }
+    void OnDisable() { if (blood != null) { blood.Activated -= Unfurl; blood.Deactivated -= Fold; } VampireMana.NotEnough -= OnNotEnough; }
+
+    void OnNotEnough(float cost) => blinkUntil = Time.unscaledTime + 0.9f;
     void Start() { if (blood != null && blood.IsActive) Unfurl(); }
 
     void Update()
     {
+        var vm = VampireMana.Instance;
+        if (vm != null && Mathf.Abs(vm.Fraction - mana) > 0.0001f) SetMana(vm.Fraction);
+        // Refused ability: the wing blinks red three times.
+        bool blink = Time.unscaledTime < blinkUntil && Mathf.Repeat(Time.unscaledTime * 6f, 1f) < 0.5f;
+        frame.color = blink ? new Color(1f, 0.35f, 0.35f) : Color.white;
+        if (track != null) track.color = blink ? new Color(0.5f, 0.05f, 0.08f, 0.9f) : trackColor;
         shown = mana > shown ? Mathf.MoveTowards(shown, mana, riseSpeed * Time.deltaTime) : mana;
         if (frames != null && frames.Length > 0)
             frame.sprite = frames[Mathf.RoundToInt((1f - shown) * (frames.Length - 1))];

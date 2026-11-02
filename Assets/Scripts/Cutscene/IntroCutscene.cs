@@ -8,7 +8,7 @@ using UnityEngine.InputSystem;
 /// Level intro. A TV in a dark room shows a live news report over the city streets (headline, ticker,
 /// anchor voice with subtitles) about coffins appearing and an anonymous warning of a vampire. The TV
 /// glitches out, the film cuts to a close-up of the start coffin, the lid opens and the vampire climbs out.
-/// Then it fades into play. Space, Enter or Esc skips. Empty audio slots are silent; without a voice clip
+/// Then it fades into play. Holding Space, Enter or Esc for a second skips (a ring fills while held). Empty audio slots are silent; without a voice clip
 /// the subtitles are timed from the script length, so the scene works before the sounds exist.
 /// </summary>
 public class IntroCutscene : MonoBehaviour
@@ -43,6 +43,8 @@ public class IntroCutscene : MonoBehaviour
     public CanvasGroup black;
     public TMP_Text subtitle;
     public CanvasGroup skipHint;
+    [Tooltip("Seconds Space/Enter/Esc must be held to skip, so a stray key press cannot skip by accident.")]
+    public float holdToSkip = 1f;
 
     [Header("Audio (Assets/Audio/Cutscene)")]
     public AudioClip newsJingle;
@@ -81,6 +83,8 @@ public class IntroCutscene : MonoBehaviour
     public float holdAfterEmerge = 1f;
 
     bool skip, emerged, finished, tvOver;
+    float skipHold;
+    UnityEngine.UI.Image skipRing;
     AudioSource sfx, voice, bed, staticLoop, glitchSource;
     Material screenMat;
     Texture screenFeed;
@@ -122,7 +126,7 @@ public class IntroCutscene : MonoBehaviour
         newsCamera.enabled = true;
         black.alpha = 1f;
         if (subtitle != null) subtitle.text = "";
-        if (skipHint != null) skipHint.alpha = 0f;
+        if (skipHint != null) { skipHint.alpha = 0f; BuildSkipPrompt(); }
 
         // The street waits for the cutscene: no one wanders, screams or shoots until the game starts.
         foreach (var h in FindObjectsByType<HumanAI>(FindObjectsSortMode.None)) Freeze(h);
@@ -178,8 +182,11 @@ public class IntroCutscene : MonoBehaviour
     {
         if (finished) return;
         var kb = Keyboard.current;
-        if (kb != null && (kb.spaceKey.wasPressedThisFrame || kb.enterKey.wasPressedThisFrame || kb.escapeKey.wasPressedThisFrame))
-            skip = true;
+        // Hold to skip: the ring fills while a skip key is held and drains when it is let go.
+        bool held = kb != null && (kb.spaceKey.isPressed || kb.enterKey.isPressed || kb.escapeKey.isPressed);
+        skipHold = held ? skipHold + Time.unscaledDeltaTime : Mathf.Max(0f, skipHold - Time.unscaledDeltaTime * 2f);
+        if (skipRing != null) skipRing.fillAmount = Mathf.Clamp01(skipHold / Mathf.Max(0.05f, holdToSkip));
+        if (skipHold >= holdToSkip) skip = true;
 
         // TV screen: live feed, or animated static while glitching.
         bool glitch = Time.time < staticUntil;
@@ -274,6 +281,45 @@ public class IntroCutscene : MonoBehaviour
     }
 
     /// <summary>Fade to black, hand over to the gameplay camera and UI, fade back in.</summary>
+    /// <summary>Replaces the plain skip text with [ring] [Space] Hold to skip, on a dark rounded panel at the bottom right.</summary>
+    void BuildSkipPrompt()
+    {
+        foreach (Transform child in skipHint.transform) child.gameObject.SetActive(false);
+        var panel = ThrallAbility.NewUI("HoldToSkip", skipHint.transform);
+        var rt = (RectTransform)panel.transform;
+        rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(1f, 0.5f);
+        rt.anchoredPosition = Vector2.zero;   // right-aligned inside the old hint's box
+        var bg = panel.AddComponent<UnityEngine.UI.Image>();
+        bg.sprite = AbilityHUD.Rounded();
+        bg.type = UnityEngine.UI.Image.Type.Sliced;
+        bg.color = new Color(0.02f, 0.02f, 0.03f, 0.75f);
+        bg.raycastTarget = false;
+        var row = panel.AddComponent<UnityEngine.UI.HorizontalLayoutGroup>();
+        row.padding = new RectOffset(10, 18, 8, 8);
+        row.spacing = 12f;
+        row.childAlignment = TextAnchor.MiddleLeft;
+        row.childControlWidth = row.childControlHeight = true;
+        row.childForceExpandWidth = row.childForceExpandHeight = false;
+        var fit = panel.AddComponent<UnityEngine.UI.ContentSizeFitter>();
+        fit.horizontalFit = fit.verticalFit = UnityEngine.UI.ContentSizeFitter.FitMode.PreferredSize;
+
+        // The progress ring: a faint track and a bright ring that fills clockwise while the key is held.
+        var ringHolder = ThrallAbility.NewUI("Ring", panel.transform);
+        var le = ringHolder.AddComponent<UnityEngine.UI.LayoutElement>();
+        le.preferredWidth = le.minWidth = le.preferredHeight = le.minHeight = 30f;
+        Sprite ring = ThrallAbility.MakeCircleSprite(64, 0.5f, 0.36f);
+        ThrallAbility.AddChildImage(ringHolder.transform, "Track", ring, new Color(1f, 1f, 1f, 0.22f), new Vector2(30f, 30f));
+        skipRing = ThrallAbility.AddChildImage(ringHolder.transform, "Fill", ring, Color.white, new Vector2(30f, 30f));
+        skipRing.type = UnityEngine.UI.Image.Type.Filled;
+        skipRing.fillMethod = UnityEngine.UI.Image.FillMethod.Radial360;
+        skipRing.fillOrigin = (int)UnityEngine.UI.Image.Origin360.Top;
+        skipRing.fillClockwise = true;
+        skipRing.fillAmount = 0f;
+
+        AbilityHUD.KeyCap(panel.transform, "Space");
+        AbilityHUD.Label(panel.transform, "Hold to skip", 20, new Color(1f, 1f, 1f, 0.85f), 1f);
+    }
+
     IEnumerator Finish()
     {
         finished = true;

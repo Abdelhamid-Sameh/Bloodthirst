@@ -6,7 +6,7 @@ using UnityEngine.UI;
 /// <summary>
 /// Special ability "Shield".
 ///
-/// Press the button next to Shadow Bite (or G): an almost invisible bubble surrounds the vampire for a few seconds and he takes
+/// Press the button in the ability triangle (or 2, costs 30 mana): an almost invisible bubble surrounds the vampire for a few seconds and he takes
 /// no damage and does not flinch. The bubble lights up for a moment whenever something hits it (a bullet or a punch).
 ///
 /// How it blocks damage: VampireBlood.TakeDamage, VampireHealth.TakeDamage and VampireController.OnHurt ask ShieldAbility first
@@ -19,11 +19,13 @@ public class ShieldAbility : MonoBehaviour
 {
     [Header("Ability")]
     [Tooltip("Key that raises the shield (the button at the bottom right does the same).")]
-    public Key hotkey = Key.G;
+    public Key hotkey = Key.Digit2;
     [Tooltip("Seconds the shield lasts.")]
     public float duration = 10f;
     [Tooltip("Seconds before it can be used again (counted from when the shield ends).")]
     public float cooldown = 15f;
+    [Tooltip("Mana it costs (VampireMana).")]
+    public float manaCost = 30f;
 
     [Header("Look")]
     [Tooltip("Width of the bubble in metres.")]
@@ -68,7 +70,11 @@ public static bool Absorb()
     GameObject uiRoot;
     CanvasGroup uiGroup;
     Image ringImage, cooldownImage;
-    TMP_Text centerText;
+    TMP_Text centerText, costText;
+    Image iconImage;
+    RectTransform buttonRect;
+    Vector2 buttonRest;
+    float shakeUntil;
 
     // ------------------------------------------------------------------ lifecycle
 
@@ -125,6 +131,11 @@ void OnDestroy()
         if (timeLeft > 0f || cooldownRemaining > 0f)
         {
             flashUntil = Time.unscaledTime + 0.35f;   // the ring blinks red: not ready
+            return;
+        }
+        if (!VampireMana.TrySpend(manaCost))
+        {
+            flashUntil = shakeUntil = Time.unscaledTime + 0.35f;   // red ring + shake; the mana wing blinks and a toast explains
             return;
         }
         timeLeft = duration;
@@ -364,12 +375,14 @@ void BuildBubble()
         Sprite disc256 = ThrallAbility.MakeCircleSprite(256, 0.5f, 0f);
         Sprite ring256 = ThrallAbility.MakeCircleSprite(256, 0.5f, 0.455f);
 
-        // Same size as the Shadow Bite button (124), 24 px to its left.
+        // Bottom right of the ability triangle (AbilityHUD), same size as the other buttons.
         GameObject button = ThrallAbility.NewUI("ShieldButton", uiRoot.transform);
         RectTransform brt = button.GetComponent<RectTransform>();
         brt.anchorMin = brt.anchorMax = brt.pivot = new Vector2(1f, 0f);
-        brt.anchoredPosition = new Vector2(-218f, 70f);
+        brt.anchoredPosition = buttonRest = AbilityHUD.SlotPosition(1);
         brt.sizeDelta = new Vector2(124f, 124f);
+        brt.localScale = Vector3.one * AbilityHUD.ButtonScale;
+        buttonRect = brt;
         Image bg = button.AddComponent<Image>();
         bg.sprite = disc256;
         bg.color = new Color(0.04f, 0.06f, 0.10f, 0.92f);
@@ -382,7 +395,7 @@ void BuildBubble()
         btn.onClick.AddListener(Activate);
 
         ringImage = ThrallAbility.AddChildImage(button.transform, "Ring", ring256, accent, new Vector2(124f, 124f));
-        ThrallAbility.AddChildImage(button.transform, "Icon", MakeShieldIcon(128), Color.white, new Vector2(80f, 80f));
+        iconImage = ThrallAbility.AddChildImage(button.transform, "Icon", MakeShieldIcon(128), Color.white, new Vector2(80f, 80f));
         cooldownImage = ThrallAbility.AddChildImage(button.transform, "Cooldown", disc256, new Color(0f, 0f, 0f, 0.7f), new Vector2(118f, 118f));
         cooldownImage.type = Image.Type.Filled;
         cooldownImage.fillMethod = Image.FillMethod.Radial360;
@@ -398,12 +411,11 @@ void BuildBubble()
         crt.anchorMin = crt.anchorMax = new Vector2(0f, 0f);
         crt.anchoredPosition = new Vector2(12f, 12f);
         ThrallAbility.AddChildImage(cap.transform, "KeyCapRing", ring256, accent, new Vector2(40f, 40f));
-        ThrallAbility.MakeText(cap.transform, "KeyText", hotkey.ToString(), 24, Color.white, TextAlignmentOptions.Center,
+        ThrallAbility.MakeText(cap.transform, "KeyText", AbilityHUD.KeyLabel(hotkey), 24, Color.white, TextAlignmentOptions.Center,
                                new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(40f, 40f), 0f);
 
-        // Name above the button.
-        ThrallAbility.MakeText(uiRoot.transform, "Label", "SHIELD", 18, new Color(0.75f, 0.88f, 1f, 0.9f), TextAlignmentOptions.Center,
-                               new Vector2(1f, 0f), new Vector2(0.5f, 0f), new Vector2(-280f, 204f), new Vector2(200f, 34f), 5f);
+        // Mana cost, top right (the name is in the controls guide).
+        costText = AbilityHUD.AddCostBadge(button.transform, manaCost);
     }
 
     void UpdateUI()
@@ -418,9 +430,13 @@ void BuildBubble()
         else if (onCooldown) { centerText.text = Mathf.CeilToInt(cooldownRemaining).ToString(); centerText.color = Color.white; }
         else centerText.text = "";
 
+        bool affordable = active || VampireMana.CanAfford(manaCost);
+        AbilityHUD.ShowAffordable(iconImage, costText, affordable);
+        buttonRect.anchoredPosition = buttonRest + AbilityHUD.Shake(shakeUntil);
+
         Color ring = accent;
         if (active) ring = Color.Lerp(accent, Color.white, 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 6f));
-        else if (onCooldown || controller.IsDead) ring = new Color(0.4f, 0.38f, 0.45f, 1f);
+        else if (onCooldown || !affordable || controller.IsDead) ring = new Color(0.4f, 0.38f, 0.45f, 1f);
         if (Time.unscaledTime < flashUntil) ring = new Color(1f, 0.2f, 0.25f, 1f);
         ringImage.color = ring;
     }
