@@ -18,7 +18,6 @@ using UnityEngine.UI;
 /// Right click, Esc, T or the button again cancel. The component is added to the vampire automatically when the game
 /// starts (ThrallAbilityInstaller below), so nothing has to be set up in the scene.
 /// </summary>
-[DisallowMultipleComponent]
 [RequireComponent(typeof(VampireController))]
 public class ThrallAbility : MonoBehaviour
 {
@@ -80,9 +79,22 @@ public class ThrallAbility : MonoBehaviour
     const int RingPoints = 96;
     const int TargetRingPoints = 40;
 
+    // ------------------------------------------------------------------ variants
+    // Blood Leap (BloodLeapAbility) reuses this whole ability and overrides only these.
+
+    protected virtual string Title => "SHADOW BITE";
+    protected virtual float ButtonOffsetX => 0f;
+    protected virtual Color IconTint => Color.white;
+    protected virtual Color PoolGlow => new Color(0.55f, 0.14f, 0.85f);
+    protected virtual Color DustColor => new Color(0.18f, 0.05f, 0.30f, 0.85f);
+    protected virtual bool TargetsOfficers => true;
+    protected virtual bool AtCapacity => ActiveThralls >= maxThralls;
+    protected virtual string CountLabel => ActiveThralls + "/" + maxThralls;
+    protected VampireController Controller => controller;
+
     // ------------------------------------------------------------------ lifecycle
 
-    void Awake()
+    protected virtual void Awake()
     {
         controller = GetComponent<VampireController>();
         sfx = GetComponent<VampireAudio>();
@@ -161,7 +173,8 @@ void OnDestroy()
         if (mode == Mode.Aiming) { CancelAiming(); return; }
         if (mode != Mode.Idle || !uiShown || GameState.Paused) return;
         if (controller.IsDead || controller.IsBusy) return;
-        if (cooldownRemaining > 0f || ActiveThralls >= maxThralls)
+        if (controller.AbilityAiming) return;   // another ability is already choosing a target
+        if (cooldownRemaining > 0f || AtCapacity)
         {
             flashUntil = Time.unscaledTime + 0.35f;   // the ring blinks red: not ready
             return;
@@ -233,6 +246,7 @@ void UpdateAiming(Mouse mouse)
         Vector3 c = transform.position;
         foreach (HumanAI h in FindObjectsByType<HumanAI>(FindObjectsSortMode.None))
             if (h.CanBeBitten && FlatDistance(h.transform.position, c) <= range) candidates.Add(h.transform);
+        if (TargetsOfficers)
         foreach (PoliceAI p in FindObjectsByType<PoliceAI>(FindObjectsSortMode.None))
             if (p.CanBeHit && FlatDistance(p.transform.position, c) <= range) candidates.Add(p.transform);
     }
@@ -346,7 +360,18 @@ void UpdateAiming(Mouse mouse)
         SetVisible(true);
         yield return new WaitForSeconds(0.12f);
 
-        // 4. He bites. At the moment the fangs sink in the victim turns.
+        // 4. He bites (Shadow Bite turns the victim; Blood Leap drinks him).
+        yield return BiteOnArrival(target);
+
+        SetVisible(true);
+        controller.EndAbility();
+        cooldownRemaining = cooldown;
+        mode = Mode.Idle;
+    }
+
+    /// <summary>The bite once he has appeared next to the target. Shadow Bite: the victim turns as the fangs sink in.</summary>
+    protected virtual IEnumerator BiteOnArrival(Transform target)
+    {
         bool valid = target != null && IsStillValid(target);
         if (valid)
         {
@@ -369,11 +394,6 @@ void UpdateAiming(Mouse mouse)
             }
         });
         if (!converted) Convert(target);
-
-        SetVisible(true);
-        controller.EndAbility();
-        cooldownRemaining = cooldown;
-        mode = Mode.Idle;
     }
 
     bool IsStillValid(Transform target)
@@ -525,7 +545,7 @@ void UpdateAiming(Mouse mouse)
         ep.startSize = Random.Range(0.5f, 1.1f) * sizeScale;
         ep.startLifetime = Random.Range(0.7f, 1.4f);
         float v = Random.value;
-        ep.startColor = Color.Lerp(new Color(0.01f, 0f, 0.03f, 0.95f), new Color(0.18f, 0.05f, 0.30f, 0.85f), v * v);
+        ep.startColor = Color.Lerp(new Color(0.01f, 0f, 0.03f, 0.95f), DustColor, v * v);
         ep.rotation = Random.Range(0f, 360f);
         dust.Emit(ep, 1);
     }
@@ -556,13 +576,13 @@ void BuildAimVisuals()
         lineMaterial = new Material(shader);
 
         // Two layers of creeping shadow that slowly turn against each other.
-        disc = MakeShadowDisc("ShadowRange", shader, MakeShadowPoolTexture(384, 0f), out discMaterial);
-        disc2 = MakeShadowDisc("ShadowRange2", shader, MakeShadowPoolTexture(384, 37f), out disc2Material);
+        disc = MakeShadowDisc("ShadowRange", shader, MakeShadowPoolTexture(384, 0f, PoolGlow), out discMaterial);
+        disc2 = MakeShadowDisc("ShadowRange2", shader, MakeShadowPoolTexture(384, 37f, PoolGlow), out disc2Material);
 
         rangeRing = MakeLine("ShadowRangeRing", RingPoints, true, 0.12f);
         previewLine = MakeLine("ShadowPreviewLine", 2, false, 0.1f);
         previewLine.startColor = new Color(0.04f, 0.0f, 0.08f, 0.95f);
-        previewLine.endColor = new Color(0.20f, 0.06f, 0.34f, 0.9f);
+        previewLine.endColor = DustColor;
 
         // Dark dust swirling around the edge, and thin wisps rising from inside the pool.
         rangeDust = MakeAuraDust("ShadowRangeDust", 150f, 0.05f, 1.0f, 2.4f, 0.85f, 0.85f, 0.22f);
@@ -631,7 +651,7 @@ void ShowAimVisuals(bool show)
         GameObject button = NewUI("ShadowBiteButton", uiRoot.transform);
         RectTransform brt = button.GetComponent<RectTransform>();
         brt.anchorMin = brt.anchorMax = brt.pivot = new Vector2(1f, 0f);
-        brt.anchoredPosition = new Vector2(-70f, 70f);
+        brt.anchoredPosition = new Vector2(-70f + ButtonOffsetX, 70f);
         brt.sizeDelta = new Vector2(124f, 124f);
         Image bg = button.AddComponent<Image>();
         bg.sprite = disc256;
@@ -645,7 +665,7 @@ void ShowAimVisuals(bool show)
         btn.onClick.AddListener(ToggleAiming);
 
         ringImage = AddChildImage(button.transform, "Ring", ring256, accent, new Vector2(124f, 124f));
-        AddChildImage(button.transform, "Icon", MakeIconSprite(128), Color.white, new Vector2(86f, 86f));
+        AddChildImage(button.transform, "Icon", MakeIconSprite(128), IconTint, new Vector2(86f, 86f));
         cooldownImage = AddChildImage(button.transform, "Cooldown", disc256, new Color(0f, 0f, 0f, 0.7f), new Vector2(118f, 118f));
         cooldownImage.type = Image.Type.Filled;
         cooldownImage.fillMethod = Image.FillMethod.Radial360;
@@ -665,15 +685,15 @@ void ShowAimVisuals(bool show)
                            new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(40f, 40f), 0f);
 
         // How many thralls are alive, top right of the button.
-        countText = MakeText(button.transform, "CountText", "0/" + maxThralls, 22, new Color(0.85f, 0.75f, 1f, 0.95f), TextAlignmentOptions.Center,
+        countText = MakeText(button.transform, "CountText", CountLabel, 22, new Color(0.85f, 0.75f, 1f, 0.95f), TextAlignmentOptions.Center,
                              new Vector2(1f, 1f), new Vector2(0.5f, 0.5f), new Vector2(-8f, -8f), new Vector2(70f, 30f), 0f);
 
         // Name above the button.
-        MakeText(uiRoot.transform, "Label", "SHADOW BITE", 22, new Color(0.82f, 0.72f, 1f, 0.9f), TextAlignmentOptions.Center,
-                 new Vector2(1f, 0f), new Vector2(0.5f, 0f), new Vector2(-132f, 204f), new Vector2(300f, 34f), 8f);
+        MakeText(uiRoot.transform, "Label", Title, 22, Color.Lerp(accent, Color.white, 0.6f), TextAlignmentOptions.Center,
+                 new Vector2(1f, 0f), new Vector2(0.5f, 0f), new Vector2(-132f + ButtonOffsetX, 204f), new Vector2(300f, 34f), 8f);
 
         // Hint while aiming.
-        hintText = MakeText(uiRoot.transform, "Hint", "Choose a target     Left click: Shadow Bite     Right click / " + hotkey + ": cancel", 26,
+        hintText = MakeText(uiRoot.transform, "Hint", "Choose a target     Left click: " + Title + "     Right click / " + hotkey + ": cancel", 26,
                             new Color(1f, 1f, 1f, 0.92f), TextAlignmentOptions.Right,
                             new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-70f, 246f), new Vector2(1000f, 40f), 0f);
         hintText.gameObject.SetActive(false);
@@ -686,10 +706,10 @@ void ShowAimVisuals(bool show)
 
         bool aiming = mode == Mode.Aiming;
         bool onCooldown = cooldownRemaining > 0f;
-        bool full = ActiveThralls >= maxThralls;
+        bool full = AtCapacity;
         cooldownImage.fillAmount = cooldown > 0f ? cooldownRemaining / cooldown : 0f;
         cooldownText.text = onCooldown ? Mathf.CeilToInt(cooldownRemaining).ToString() : "";
-        countText.text = ActiveThralls + "/" + maxThralls;
+        countText.text = CountLabel;
         hintText.gameObject.SetActive(aiming);
 
         Color ring = accent;
@@ -857,13 +877,12 @@ void ShowAimVisuals(bool show)
     }
 
     /// <summary>A pool of near-black shadow with a ragged, tendril-like edge, mottled like smoke, and a faint violet glow along its rim.</summary>
-    static Texture2D MakeShadowPoolTexture(int size, float seed)
+    static Texture2D MakeShadowPoolTexture(int size, float seed, Color glow)
     {
         Texture2D tex = NewTexture(size, size);
         Color32[] px = new Color32[size * size];
         float c = size * 0.5f;
         Color inner = new Color(0.03f, 0f, 0.06f);
-        Color glow = new Color(0.55f, 0.14f, 0.85f);
         for (int y = 0; y < size; y++)
             for (int x = 0; x < size; x++)
             {
@@ -1021,6 +1040,10 @@ public class ThrallAbilityInstaller : MonoBehaviour
         if (Time.unscaledTime < nextScan) return;
         nextScan = Time.unscaledTime + 1f;
         VampireController vampire = FindFirstObjectByType<VampireController>();
-        if (vampire != null && vampire.GetComponent<ThrallAbility>() == null) vampire.gameObject.AddComponent<ThrallAbility>();
+        if (vampire == null) return;
+        bool hasShadowBite = false;
+        foreach (ThrallAbility a in vampire.GetComponents<ThrallAbility>()) if (a.GetType() == typeof(ThrallAbility)) hasShadowBite = true;
+        if (!hasShadowBite) vampire.gameObject.AddComponent<ThrallAbility>();
+        if (vampire.GetComponent<BloodLeapAbility>() == null) vampire.gameObject.AddComponent<BloodLeapAbility>();
     }
 }
