@@ -10,15 +10,15 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: -8679921383154817045, guid: 26223008d2b141d498eb929868a98603, type: 3}
       propertyPath: m_LocalScale.x
-      value: 1.5
+      value: 1.1
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 26223008d2b141d498eb929868a98603, type: 3}
       propertyPath: m_LocalScale.y
-      value: 1.5
+      value: 1.1
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 26223008d2b141d498eb929868a98603, type: 3}
       propertyPath: m_LocalScale.z
-      value: 1.5
+      value: 1.1
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 26223008d2b141d498eb929868a98603, type: 3}
       propertyPath: m_LocalPosition.x
@@ -129,8 +129,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HumanAI
   currentState: 0
-  walkSpeed: 2
-  fleeSpeed: 3.5
+  walkSpeed: 1.4
+  fleeSpeed: 4.8
   vampirePlayer: {fileID: 0}
   detectionRadius: 10
   fieldOfViewAngle: 110
@@ -138,8 +138,13 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 1
   detectionDelay: 5
+  closeAwarenessRadius: 4
   eyeHeight: 1.6
   targetHeight: 1
+  maxHealth: 40
+  hitStunTime: 1.2
+  knockbackDistance: 0.05
+  hitRetriggerDelay: 1
   wanderRadius: 10
   walkDuration: 4
   idleDuration: 3
