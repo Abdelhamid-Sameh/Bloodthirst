@@ -13,6 +13,8 @@ public class VampireBlood : MonoBehaviour
     public float maxBlood = 100f;
     [Tooltip("Blood lost per second without feeding. 1.2 = about 83 seconds from full to empty.")]
     public float drainPerSecond = 1.2f;
+    /// <summary>Set by LightExposure: the drain runs this many times faster while he stands in lamplight.</summary>
+    [HideInInspector] public float drainMultiplier = 1f;
     [Tooltip("Blood gained from biting a civilian.")]
     public float humanBlood = 30f;
     [Tooltip("Blood gained from biting a police officer (riskier, so worth more).")]
@@ -67,7 +69,7 @@ public class VampireBlood : MonoBehaviour
     void Update()
     {
         if (!IsActive || controller.IsDead || controller.IsBusy) return;
-        Current = Mathf.Max(0f, Current - drainPerSecond * Time.deltaTime);
+        Current = Mathf.Max(0f, Current - drainPerSecond * drainMultiplier * Time.deltaTime);
         if (Current <= 0f) controller.Die();
     }
 

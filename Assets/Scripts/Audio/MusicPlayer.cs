@@ -52,7 +52,7 @@ public class MusicPlayer : MonoBehaviour
     void Update()
     {
         float pauseScale = GameState.Paused ? pausedVolumeScale : 1f;
-        musicSource.volume = Mathf.MoveTowards(musicSource.volume, musicVolume * fade * pauseScale, Time.unscaledDeltaTime);
+        musicSource.volume = Mathf.MoveTowards(musicSource.volume, musicVolume * GameSettings.MusicVolume * fade * pauseScale, Time.unscaledDeltaTime);
         ambienceSource.volume = ambienceVolume * fade;
     }
 }
