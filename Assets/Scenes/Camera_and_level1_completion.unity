@@ -23429,6 +23429,7 @@ MonoBehaviour:
   moveSpeed: 6
   sprintMultiplier: 1.6
   flinchOnHit: 0
+  emergeProtection: 2.5
   runTurnSpeed: 720
   idleTurnSpeed: 200
   idleTurnThreshold: 25

@@ -28,6 +28,8 @@ public class VampireController : MonoBehaviour
     public float sprintMultiplier = 1.6f;
     [Tooltip("Play the hit reaction (and lose control briefly) when a bullet lands. Off: hits only cost blood.")]
     public bool flinchOnHit = false;
+    [Tooltip("Seconds he cannot be shot or punched after leaving a coffin, so the player always gets a chance to move.")]
+    public float emergeProtection = 2.5f;
     [Tooltip("How fast he turns to face where he is running (degrees per second).")]
     public float runTurnSpeed = 720f;
     [Tooltip("How fast he turns on the spot toward the mouse (degrees per second).")]
@@ -194,6 +196,29 @@ public class VampireController : MonoBehaviour
         coffin.Activate();
         respawnCoffin = coffin;
         StartCoroutine(EmergeRoutine(coffin, introDelay));
+    }
+
+    float protectedUntil;
+    bool emerging;
+    /// <summary>True while he climbs out of a coffin and for emergeProtection seconds after: police hold fire and nothing hurts him.</summary>
+    public bool IsSpawnProtected => !IsDead && (emerging || Time.time < protectedUntil);
+
+    // While dead nothing may pull him out of the dying pose (a stale Jump/Bite/Hit trigger used to win over Die).
+    void LateUpdate()
+    {
+        if (!IsDead || animator == null) return;
+        ResetActionTriggers();
+        bool dying = animator.GetCurrentAnimatorStateInfo(0).IsName("Dying") || (animator.IsInTransition(0) && animator.GetNextAnimatorStateInfo(0).IsName("Dying"));
+        if (!dying) animator.CrossFadeInFixedTime("Dying", 0.15f, 0);
+    }
+
+    void ResetActionTriggers()
+    {
+        animator.ResetTrigger(JumpHash);
+        animator.ResetTrigger(BiteHash);
+        animator.ResetTrigger(CheckpointHash);
+        animator.ResetTrigger(AttackHash);
+        animator.ResetTrigger(HitHash);
     }
 
     void Update()
@@ -730,6 +755,7 @@ if (!flinchOnHit) return; // being stun-locked by every bullet made fights unwin
     IEnumerator EmergeRoutine(CoffinCheckpoint coffin, float delay)
     {
         BeginSequence();
+        emerging = true;
         SetVisible(true);
         coffin.SetLidImmediate(CoffinCheckpoint.LidState.Closed);
         PlaceAt(coffin.InsidePosition, coffin.InsideRotation);
@@ -753,6 +779,8 @@ if (!flinchOnHit) return; // being stun-locked by every bullet made fights unwin
         SetCapeSimulated(true);
         yield return FloatTo(coffin.RespawnPosition, coffin.RespawnRotation, 0.5f, 0.7f);
 
+        emerging = false;
+        protectedUntil = Time.time + emergeProtection;   // a moment to get his bearings before the police can hurt him
         EndSequence();
         onEmerged.Invoke();
     }
@@ -850,10 +878,11 @@ if (!flinchOnHit) return; // being stun-locked by every bullet made fights unwin
         SetVisible(true);
         IsBusy = false;
         IsDead = true;
+        emerging = false;
         StopLocomotionAnimation();
-        if (hasAttackAnim) animator.ResetTrigger(AttackHash);
-        if (hasHitAnim) animator.ResetTrigger(HitHash);
-        animator.SetTrigger(DieHash);
+        ResetActionTriggers();
+        animator.ResetTrigger(DieHash);
+        animator.CrossFadeInFixedTime("Dying", 0.15f, 0);   // straight to the death animation, whatever state he was in
         if (capeCloth != null) capeCloth.externalAcceleration = Vector3.zero;
         if (sfx != null) sfx.PlayDeath();
         onDeath.Invoke();

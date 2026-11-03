@@ -276,7 +276,7 @@ public class PoliceAI : MonoBehaviour
                 hasSpot = false;
             }
             FaceVampire();
-            if (Time.time >= nextFireTime && TryHoldFireToken()) Fire(aim);
+            if (Time.time >= nextFireTime && !VampireProtected && TryHoldFireToken()) Fire(aim);   // hold fire while he climbs out of a coffin
         }
         else
         {
@@ -821,8 +821,11 @@ public void TakeHit(float amount, Transform attacker)
     }
 
     /// <summary>Hurts the vampire the same way a bullet does: he flinches and loses blood (or health).</summary>
+    bool VampireProtected => vampireController != null && vampireController.IsSpawnProtected;
+
     void DamageVampire(float amount)
     {
+        if (VampireProtected) return;
         if (vampireController != null) vampireController.OnHurt();
         if (vampireBlood != null) vampireBlood.TakeDamage(amount);
         else if (vampireHealth != null) vampireHealth.TakeDamage(amount);
