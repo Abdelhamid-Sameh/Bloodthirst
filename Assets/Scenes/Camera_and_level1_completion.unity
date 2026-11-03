@@ -9657,7 +9657,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Sprint (hold)
+  m_text: Sprint (hold, uses stamina)
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -24711,7 +24711,7 @@ MonoBehaviour:
   lungeSpeed: 9
   attackStepSpeed: 3
   attackAngle: 120
-  attackDamage: 20
+  attackDamage: 10
   hitTimes:
   - 0.17
   - 0.3
@@ -24949,7 +24949,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::VampireBlood
   maxBlood: 100
-  drainPerSecond: 1.2
+  drainPerSecond: 2
+  sprintDrainMultiplier: 2
+  restRefill: 0.6
   drainMultiplier: 1
   humanBlood: 30
   policeBlood: 45
@@ -34065,7 +34067,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Sprint (hold)
+  m_text: Sprint (hold, uses stamina)
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}

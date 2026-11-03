@@ -425,11 +425,11 @@ public class MainMenu : MonoBehaviour
         var p = NewPage("rules", "RULES OF THE NIGHT", 880f);
         string[,] rules =
         {
-            { "I", "BLOOD IS LIFE", "Your blood drains with every second. Bite humans to drink. An empty vein is a second death." },
+            { "I", "BLOOD IS LIFE", "Your blood drains every second, faster when you sprint. Bite humans to drink. An empty vein is a second death." },
             { "II", "FEAR THE LAMPLIGHT", "Lamp light burns you: you smoke and bleed out far faster. Keep to the shadows. A dead lamp is safe." },
             { "III", "POWER IS EARNED", "Mana only comes from landing blows. Spend it on Blood Leap, Shield and Shadow Bite." },
-            { "IV", "THE LAW HUNTS YOU", "Officers shoot on sight and raise their shields. Wound one before you try to drink." },
-            { "V", "COFFINS ARE SANCTUARY", "Rest in a coffin to mark where you rise again. Climbing out, you are untouchable for a moment." },
+            { "IV", "THE LAW HUNTS YOU", "Officers shoot on sight and raise their shields. Wound one before you drink; beat anyone to death and the blood is wasted." },
+            { "V", "COFFINS ARE SANCTUARY", "Rest in a coffin to recover blood and mark where you rise again. Climbing out, you are untouchable for a moment." },
             { "VI", "FOLLOW THE BLOOD", "A trail of blood on the street leads to what waits for you tonight." },
         };
         for (int i = 0; i < rules.GetLength(0); i++)
@@ -452,7 +452,7 @@ public class MainMenu : MonoBehaviour
         string[][] rows =
         {
             new[] { "W", "A", "S", "D", "|Move" },
-            new[] { "Shift", "|Sprint (hold)" },
+            new[] { "Shift", "|Sprint (hold, uses stamina)" },
             new[] { "Mouse", "|Face the cursor" },
             new[] { "Space", "|Jump" },
             new[] { "E", "/", "Left click", "|Bite a victim within reach" },

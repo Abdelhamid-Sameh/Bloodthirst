@@ -103,6 +103,21 @@ MonoBehaviour:
   minCombatDistance: 4
   maxCombatDistance: 8
   repositionDistance: 3
+  maxHealth: 70
+  biteHealthFraction: 0.4
+  hitStaggerTime: 0.6
+  knockbackDistance: 0.05
+  hitRetriggerDelay: 1
+  enableMelee: 0
+  meleeRange: 2
+  meleeDamage: 8
+  meleeInterval: 1.4
+  punchHitTime: 0.32
+  punchDuration: 1
+  blockChance: 0.6
+  blockDuration: 3
+  blockCooldown: 2
+  blockedDamageMultiplier: 0.25
   gun: {fileID: 0}
   fireInterval: 1.2
   damage: 10

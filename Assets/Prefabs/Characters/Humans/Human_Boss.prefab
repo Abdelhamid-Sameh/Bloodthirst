@@ -141,7 +141,7 @@ MonoBehaviour:
   closeAwarenessRadius: 4
   eyeHeight: 1.6
   targetHeight: 1
-  maxHealth: 40
+  maxHealth: 50
   hitStunTime: 1.2
   knockbackDistance: 0.05
   hitRetriggerDelay: 1

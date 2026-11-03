@@ -32,8 +32,8 @@ public class HumanAI : MonoBehaviour
     public float targetHeight = 1.0f;
 
     [Header("Health (melee fights)")]
-    [Tooltip("The human's health. The vampire's fight attacks wear it down but never take it to 0 - only a bite kills him.")]
-    public float maxHealth = 40f;
+    [Tooltip("The human's health. The vampire's fight attacks wear it down and can kill him, but only a bite gives the vampire blood.")]
+    public float maxHealth = 50f;
     [Tooltip("Seconds a human stays dazed in place after being hit, before he runs.")]
     public float hitStunTime = 1.2f;
     [Tooltip("How far a hit pushes the human back.")]
@@ -300,14 +300,17 @@ private void HandleFleeing()
         }
     }
 
-/// <summary>Called when the vampire hits this human in a fight. Wears his health down (never to 0 - only a bite kills him), shoves him back and leaves him dazed.</summary>
+/// <summary>Called when the vampire hits this human in a fight. Wears his health down (enough blows kill him), shoves him back and leaves him dazed.</summary>
 public void TakeHit(float amount, Transform attacker)
     {
         if (currentState == State.Dead || currentState == State.Captured) return;
         if (health < 0f) health = maxHealth;
 
-        // A hit never kills: it only wears him down, and always leaves a little health.
-        health = Mathf.Max(health - amount, Mathf.Min(1f, maxHealth));
+        // Enough blows kill him - but a beaten corpse gives no blood, only a bite does.
+        // A blow only kills someone already on his last legs (25% or less), so a fight always leaves a moment to bite.
+        bool lastLegs = health <= maxHealth * 0.25f;
+        health = Mathf.Max(lastLegs ? 0f : Mathf.Min(1f, maxHealth), health - amount);
+        if (health <= 0f) { OnKilled(); return; }
 
         Vector3 away = Vector3.zero;
         if (attacker != null)
@@ -386,7 +389,7 @@ private IEnumerator FleeAfter(float seconds)
 
 
 
-    /// <summary>Called by the vampire when the bite kills this human.</summary>
+    /// <summary>Called when the bite (or a final blow) kills this human.</summary>
 public void OnKilled()
     {
         if (currentState == State.Dead) return;

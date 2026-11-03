@@ -41,8 +41,8 @@ public class PoliceAI : MonoBehaviour
     public float repositionDistance = 3f;
 
     [Header("Health (melee fights)")]
-    [Tooltip("The officer's health. The vampire's fight attacks wear it down but never take it to 0 - only a bite kills him.")]
-    public float maxHealth = 40f;
+    [Tooltip("The officer's health. The vampire's fight attacks wear it down and can kill him, but only a bite gives the vampire blood.")]
+    public float maxHealth = 70f;
     [Tooltip("The vampire can only bite this officer once his health is at or below this fraction of maxHealth (0.4 = 40%). Weaken him with the fight first. 1 = can always be bitten.")]
     [Range(0f, 1f)] public float biteHealthFraction = 0.4f;
     [Tooltip("Seconds the officer cannot shoot after being hit.")]
@@ -635,15 +635,18 @@ public class PoliceAI : MonoBehaviour
         hasSpot = false;
     }
 
-/// <summary>Called when the vampire hits this officer in a fight. Wears his health down (never to 0 - only a bite kills him), staggers him and shoves him back.</summary>
+/// <summary>Called when the vampire hits this officer in a fight. Wears his health down (enough blows kill him), staggers him and shoves him back.</summary>
 public void TakeHit(float amount, Transform attacker)
     {
         if (currentState == State.Dead || currentState == State.Captured) return;
         if (health < 0f) health = maxHealth;
 
-        // A hit never kills: it only wears him down, and always leaves a little health.
+        // Enough blows kill him - but a beaten corpse gives no blood, only a bite does.
         if (enableMelee && Time.time < blockUntil) amount *= blockedDamageMultiplier; // the shield soaks most of the blow
-        health = Mathf.Max(health - amount, Mathf.Min(1f, maxHealth));
+        // A blow only kills an officer who was already weak enough to bite, so a fight always leaves a moment to bite.
+        bool lastLegs = IsWeakEnoughToBite;
+        health = Mathf.Max(lastLegs ? 0f : Mathf.Min(1f, maxHealth), health - amount);
+        if (health <= 0f) { Die(); return; }
 
         // Being hit makes the officer notice the vampire even if he was standing still.
         engaged = true;
@@ -694,7 +697,7 @@ public void TakeHit(float amount, Transform attacker)
 
 
 
-    /// <summary>Called by the vampire when the bite kills this officer.</summary>
+    /// <summary>Called when the bite (or a final blow) kills this officer.</summary>
     public void Die()
     {
         if (currentState == State.Dead) return;

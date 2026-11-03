@@ -142,8 +142,13 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 1
   detectionDelay: 5
+  closeAwarenessRadius: 4
   eyeHeight: 1.6
   targetHeight: 1
+  maxHealth: 50
+  hitStunTime: 1.2
+  knockbackDistance: 0.05
+  hitRetriggerDelay: 1
   wanderRadius: 10
   walkDuration: 4
   idleDuration: 3

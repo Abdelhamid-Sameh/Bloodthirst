@@ -11,8 +11,12 @@ using UnityEngine;
 public class VampireBlood : MonoBehaviour
 {
     public float maxBlood = 100f;
-    [Tooltip("Blood lost per second without feeding. 1.2 = about 83 seconds from full to empty.")]
-    public float drainPerSecond = 1.2f;
+    [Tooltip("Blood lost per second without feeding. 2 = 50 seconds from full to empty (lamplight and sprinting drain faster).")]
+    public float drainPerSecond = 2f;
+    [Tooltip("The drain runs this many times faster while he sprints.")]
+    public float sprintDrainMultiplier = 2f;
+    [Tooltip("Getting up from a rest in a coffin restores his blood to at least this fraction (rising after death restores all of it).")]
+    [Range(0f, 1f)] public float restRefill = 0.6f;
     /// <summary>Set by LightExposure: the drain runs this many times faster while he stands in lamplight.</summary>
     [HideInInspector] public float drainMultiplier = 1f;
     [Tooltip("Blood gained from biting a civilian.")]
@@ -69,7 +73,7 @@ public class VampireBlood : MonoBehaviour
     void Update()
     {
         if (!IsActive || controller.IsDead || controller.IsBusy) return;
-        Current = Mathf.Max(0f, Current - drainPerSecond * drainMultiplier * Time.deltaTime);
+        Current = Mathf.Max(0f, Current - drainPerSecond * drainMultiplier * (controller.IsSprinting ? sprintDrainMultiplier : 1f) * Time.deltaTime);
         if (Current <= 0f) controller.Die();
     }
 
@@ -103,7 +107,8 @@ public class VampireBlood : MonoBehaviour
 
     void OnEmerged()
     {
-        Current = maxBlood;
+        // Rising after death (or at the start): a full reserve. Getting up from a rest: at least restRefill.
+        Current = IsActive ? Mathf.Max(Current, maxBlood * restRefill) : maxBlood;
         IsActive = true;
         Activated?.Invoke();
     }

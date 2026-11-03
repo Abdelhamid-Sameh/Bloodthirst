@@ -66,8 +66,8 @@ public class VampireController : MonoBehaviour
     public float attackStepSpeed = 3f;
     [Tooltip("How wide the swing is (degrees, centred on where he faces).")]
     [Range(0, 360)] public float attackAngle = 120f;
-    [Tooltip("Damage per hit. Humans and police have 40 health by default. Hits wear health down but never kill; a bite does (police only once weakened).")]
-    public float attackDamage = 20f;
+    [Tooltip("Damage per hit. Humans and police have 40 health by default. Enough hits kill (but give no blood); a bite drinks (police only once weakened).")]
+    public float attackDamage = 10f;
     [Tooltip("Points in the attack animation (0-1) at which a blow lands, in order. The Vampire Fighting combo has strikes at about 0.17, 0.30, 0.47 and 0.58.")]
     public float[] hitTimes = { 0.17f, 0.30f, 0.47f, 0.58f };
     [Tooltip("Point in the attack animation (0-1) where he is free to move again. The full combo lasts 4.7 s; 0.68 ends it after the big punch.")]
@@ -169,11 +169,15 @@ public class VampireController : MonoBehaviour
     Quaternion fallbackRespawnRotation;
     readonly List<Renderer> visibleRenderers = new List<Renderer>();
 
+    VampireStamina stamina;
+
     void Awake()
     {
         controller = GetComponent<CharacterController>();
         animator = GetComponent<Animator>();
         sfx = GetComponent<VampireAudio>();
+        stamina = GetComponent<VampireStamina>();
+        if (stamina == null) stamina = gameObject.AddComponent<VampireStamina>();   // sprint has a limit
         animator.applyRootMotion = false;
         foreach (AnimatorControllerParameter p in animator.parameters)
             {
@@ -299,8 +303,8 @@ public class VampireController : MonoBehaviour
         Vector3 moveDir = forward * input.y + right * input.x;
         bool moving = moveDir.sqrMagnitude > 0.01f;
         IsRunning = moving;
-        IsSprinting = moving && (kb.leftShiftKey.isPressed || kb.rightShiftKey.isPressed);
-        float speed = moveSpeed * (IsSprinting ? sprintMultiplier : 1f);
+        IsSprinting = moving && (kb.leftShiftKey.isPressed || kb.rightShiftKey.isPressed) && (stamina == null || stamina.CanSprint);
+        float speed = moveSpeed * (IsSprinting ? sprintMultiplier : 1f) * (stamina != null ? stamina.SpeedMultiplier : 1f);
 
         float turn = 0f;
         if (moving)
