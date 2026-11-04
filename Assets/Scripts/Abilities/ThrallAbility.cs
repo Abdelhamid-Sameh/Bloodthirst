@@ -89,7 +89,7 @@ public class ThrallAbility : MonoBehaviour
     // Blood Leap (BloodLeapAbility) reuses this whole ability and overrides only these.
 
     protected virtual string Title => "SHADOW BITE";
-    protected virtual string AimSubtitle => "Pick a human or officer inside the ring to turn";
+    protected virtual string AimSubtitle => "Pick a human or officer inside the ring to turn (gives no blood)";
     protected virtual int Slot => 2;               // top of the ability triangle (AbilityHUD)
     protected virtual float ManaCost => 50f;
     protected virtual Sprite MakeIcon() => MakeIconSprite(128);

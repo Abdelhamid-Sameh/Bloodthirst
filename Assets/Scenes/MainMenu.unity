@@ -23899,8 +23899,8 @@ MonoBehaviour:
   ambienceVolume: 0.5
   heartbeat: {fileID: 8300000, guid: 514977e9383dd6943b9f8e2c1ba51f83, type: 3}
   heartbeatVolume: 0.25
-  hoverSound: {fileID: 8300000, guid: 40d00ee1f9ca5e34c9eac59d54edbce5, type: 3}
-  selectSound: {fileID: 8300000, guid: ffbcb8147e8f84141a3ce267b8d756b4, type: 3}
+  hoverSound: {fileID: 8300000, guid: fc812c1ae38e15542b2c037ff52710bd, type: 3}
+  selectSound: {fileID: 8300000, guid: d45825ebccaff154fbcdea5dfc782b04, type: 3}
   riseSound: {fileID: 8300000, guid: e804143c7f4ce4641ae07c38cb7adad2, type: 3}
   lidSound: {fileID: 8300000, guid: a758943db49bed14993141e04f090c0b, type: 3}
 --- !u!4 &1060581755

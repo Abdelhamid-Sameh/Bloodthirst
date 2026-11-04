@@ -21,7 +21,7 @@ public class BloodLeapAbility : ThrallAbility
     }
 
     protected override string Title => "BLOOD LEAP";
-    protected override string AimSubtitle => "Pick a human inside the ring to drink";
+    protected override string AimSubtitle => "Pick a human inside the ring to drink (not police)";
     protected override int Slot => 0;              // bottom left of the ability triangle
     protected override float ManaCost => 20f;
     protected override bool ShowsThrallTimer => false;

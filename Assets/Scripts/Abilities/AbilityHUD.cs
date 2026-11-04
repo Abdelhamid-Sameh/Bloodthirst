@@ -184,7 +184,15 @@ public static class AbilityHUD
         LayoutElement le = cap.AddComponent<LayoutElement>();
         le.minWidth = 32f;
         le.minHeight = 30f;
-        Label(cap.transform, key, 17, new Color(0.08f, 0.07f, 0.09f), 0f);
+        TMP_Text t = Label(cap.transform, key, 17, new Color(0.08f, 0.07f, 0.09f), 0f);
+        if (KeyFont() != null) t.font = KeyFont();   // key caps stay in a plain sans so they read like real keys
+    }
+
+    static TMP_FontAsset keyFont;
+    static TMP_FontAsset KeyFont()
+    {
+        if (keyFont == null) keyFont = Resources.Load<TMP_FontAsset>("Fonts & Materials/LiberationSans SDF");
+        return keyFont;
     }
 
     // ------------------------------------------------------------------ "not enough mana" toast

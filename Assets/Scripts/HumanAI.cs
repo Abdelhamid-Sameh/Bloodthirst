@@ -277,6 +277,12 @@ private void HandleFleeing()
         }
         agent.enabled = false;
         animator.SetFloat("Speed", 0f);
+        if (HasAnimatorParameter("Bitten"))
+        {
+            // Struggle in the vampire's grip; the bite's kill then hands over to the Death state.
+            if (hasHitAnim) animator.ResetTrigger(HitHash);   // a queued hit reaction must not cut the struggle short
+            animator.SetTrigger("Bitten");
+        }
 
         Vector3 look = biter.position - transform.position;
         look.y = 0f;

@@ -148,7 +148,7 @@ public class ArrestSequence : MonoBehaviour
     /// <summary>Drives one ringed officer: run animation while moving, then face the vampire and aim. True once in place.</summary>
     bool UpdateOfficer(NavMeshAgent agent)
     {
-        if (agent == null) return true;
+        if (agent == null || !agent.isActiveAndEnabled || !agent.isOnNavMesh) return true;   // he was bitten or killed during the arrest
         var anim = agent.GetComponentInChildren<Animator>();
         bool arrived = !agent.pathPending && agent.remainingDistance <= agent.stoppingDistance + 0.4f;
         if (anim != null)

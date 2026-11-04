@@ -70,12 +70,16 @@ public class MainMenu : MonoBehaviour
     GameObject lastMainSelection;
     bool starting, introDone;
     AudioSource musicSource, ambienceSource, heartSource, sfx;
+    readonly AudioSource[] uiVoices = new AudioSource[4];
+    int nextVoice;
+    readonly Dictionary<AudioClip, float> onsets = new Dictionary<AudioClip, float>();
     Vector3 camPos; Quaternion camRot;
     float push;   // 0..1 camera push toward the coffin while rising
     Image[] calibration;
     TMP_Text brightnessValue, masterValue, musicValue;
     Slider brightnessSlider, masterSlider, musicSlider;
     float titleFlickerAt;
+    bool backPressSounded;   // the Back button already played its sound on press
 
     // ------------------------------------------------------------------ lifecycle
 
@@ -100,6 +104,8 @@ public class MainMenu : MonoBehaviour
         ambienceSource = MakeSource(ambience, true);
         heartSource = MakeSource(heartbeat, true);
         sfx = MakeSource(null, false);
+        for (int i = 0; i < uiVoices.Length; i++) uiVoices[i] = MakeSource(null, false);
+        foreach (var c in new[] { hoverSound, selectSound, riseSound, lidSound }) Onset(c);   // scan once up front
 
         BuildAtmosphere();
         BuildUI();
@@ -197,12 +203,12 @@ public class MainMenu : MonoBehaviour
 
     IEnumerator RiseRoutine()
     {
-        if (riseSound != null) sfx.PlayOneShot(riseSound, 0.9f);
+        if (riseSound != null) PlayNow(riseSound, 0.9f);
         StartCoroutine(FadeGroup(mainGroup, 0f, 0.6f));
         StartCoroutine(FadeGroup(titleGroup, 0f, 1.4f));
         StartCoroutine(FadeGroup(footer, 0f, 0.6f));
         yield return new WaitForSecondsRealtime(0.4f);
-        if (lidSound != null) sfx.PlayOneShot(lidSound, 1f);
+        if (lidSound != null) PlayNow(lidSound, 1f);
 
         Vector3 lidFrom = coffinLid != null ? coffinLid.localPosition : Vector3.zero;
         Quaternion lidRotFrom = coffinLid != null ? coffinLid.localRotation : Quaternion.identity;
@@ -261,7 +267,8 @@ public class MainMenu : MonoBehaviour
     void ClosePage()
     {
         if (openPage == null) return;
-        PlaySfx(selectSound, 0.35f);
+        if (!backPressSounded) PlaySfx(selectSound, 0.35f);   // Back already sounded on press; Esc sounds here
+        backPressSounded = false;
         GameSettings.Save();
         openPage.group.gameObject.SetActive(false);
         openPage = null;
@@ -280,10 +287,46 @@ public class MainMenu : MonoBehaviour
 
     internal void PlaySfx(AudioClip clip, float volume)
     {
-        if (clip != null && !starting) sfx.PlayOneShot(clip, volume);
+        if (clip != null && !starting) PlayNow(clip, volume);
     }
 
     internal void PlayHover() => PlaySfx(hoverSound, 0.22f);
+    internal void PlaySelect() => PlaySfx(selectSound, 0.5f);
+    internal void MarkBackSounded() => backPressSounded = true;
+
+    /// <summary>Plays a clip from its first audible sample: the swing and thud clips open with 0.1-0.25 s of silence,
+    /// which made the menu feel like it answered late.</summary>
+    void PlayNow(AudioClip clip, float volume)
+    {
+        var v = uiVoices[nextVoice];
+        nextVoice = (nextVoice + 1) % uiVoices.Length;
+        v.Stop();
+        v.clip = clip;
+        v.volume = volume;
+        v.time = Onset(clip);
+        v.Play();
+    }
+
+    float Onset(AudioClip clip)
+    {
+        if (clip == null) return 0f;
+        float t;
+        if (onsets.TryGetValue(clip, out t)) return t;
+        t = 0f;
+        if (clip.loadType == AudioClipLoadType.DecompressOnLoad && clip.channels > 0)
+        {
+            var data = new float[clip.samples * clip.channels];
+            if (clip.GetData(data, 0))
+            {
+                float peak = 0f;
+                foreach (float x in data) peak = Mathf.Max(peak, Mathf.Abs(x));
+                for (int i = 0; i < data.Length; i++)
+                    if (Mathf.Abs(data[i]) > peak * 0.15f) { t = Mathf.Max(0f, i / clip.channels / (float)clip.frequency - 0.01f); break; }
+            }
+        }
+        onsets[clip] = t;
+        return t;
+    }
 
     // ------------------------------------------------------------------ UI
 
@@ -365,7 +408,7 @@ public class MainMenu : MonoBehaviour
         hit.color = new Color(0f, 0f, 0f, 0f);
         var b = go.AddComponent<Button>();
         b.transition = Selectable.Transition.None;
-        b.onClick.AddListener(() => { PlaySfx(selectSound, 0.5f); onClick(); });
+        b.onClick.AddListener(() => onClick());   // the select sound plays on press (MenuItemFx), not on release
 
         var bar = NewImage(go.transform, "Blade", AbilityHUD.Rounded(), Blood);
         bar.type = Image.Type.Sliced;
@@ -427,7 +470,7 @@ public class MainMenu : MonoBehaviour
         {
             { "I", "BLOOD IS LIFE", "Your blood drains every second, faster when you sprint. Bite humans to drink. An empty vein is a second death." },
             { "II", "FEAR THE LAMPLIGHT", "Lamp light burns you: you smoke and bleed out far faster. Keep to the shadows. A dead lamp is safe." },
-            { "III", "POWER IS EARNED", "Mana only comes from landing blows. Spend it on Blood Leap, Shield and Shadow Bite." },
+            { "III", "POWER IS EARNED", "Mana only comes from landing blows. Spend it on Blood Leap (humans only), Shield, and Shadow Bite (it turns a victim but gives no blood)." },
             { "IV", "THE LAW HUNTS YOU", "Officers shoot on sight and raise their shields. Wound one before you drink; beat anyone to death and the blood is wasted." },
             { "V", "COFFINS ARE SANCTUARY", "Rest in a coffin to recover blood and mark where you rise again. Climbing out, you are untouchable for a moment." },
             { "VI", "FOLLOW THE BLOOD", "A trail of blood on the street leads to what waits for you tonight." },
@@ -458,9 +501,9 @@ public class MainMenu : MonoBehaviour
             new[] { "E", "/", "Left click", "|Bite a victim within reach" },
             new[] { "Q", "/", "Right click", "|Attack: lunge and strike" },
             new[] { "F", "|Rest in a coffin (checkpoint)" },
-            new[] { "1", "|Blood Leap: leap onto a human and drink  (20 mana)" },
+            new[] { "1", "|Blood Leap: leap onto a human, not police  (20 mana)" },
             new[] { "2", "|Shield: block all damage for 10 s  (30 mana)" },
-            new[] { "3", "|Shadow Bite: turn a victim to fight for you  (50 mana)" },
+            new[] { "3", "|Shadow Bite: turn a victim to fight for you, no blood  (50 mana)" },
             new[] { "Esc", "|Pause" },
         };
         for (int i = 0; i < rows.Length; i++)
@@ -895,7 +938,7 @@ public class MainMenu : MonoBehaviour
 }
 
 /// <summary>Hover/selection look of a menu item: the text warms to blood red and slides right, a blade grows in.</summary>
-public class MenuItemFx : MonoBehaviour, ISelectHandler, IDeselectHandler, IPointerEnterHandler
+public class MenuItemFx : MonoBehaviour, ISelectHandler, IDeselectHandler, IPointerEnterHandler, IPointerDownHandler, ISubmitHandler
 {
     internal static bool Silent;
     internal MainMenu menu;
@@ -917,6 +960,19 @@ public class MenuItemFx : MonoBehaviour, ISelectHandler, IDeselectHandler, IPoin
     }
 
     public void OnDeselect(BaseEventData e) => selected = false;
+
+    // Buttons answer the moment they are pressed.
+    public void OnPointerDown(PointerEventData e) { if (e.button == PointerEventData.InputButton.Left) Pressed(); }
+    public void OnSubmit(BaseEventData e) => Pressed();
+
+    void Pressed()
+    {
+        if (blade == null || menu == null) return;   // sliders make no click
+        var sel = GetComponent<Selectable>();
+        if (sel != null && !sel.IsInteractable()) return;
+        menu.PlaySelect();
+        if (name == "Btn_BACK") menu.MarkBackSounded();
+    }
 
     public void OnPointerEnter(PointerEventData e)
     {

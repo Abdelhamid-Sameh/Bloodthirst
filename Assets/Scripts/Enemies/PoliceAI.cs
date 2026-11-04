@@ -638,10 +638,28 @@ public class PoliceAI : MonoBehaviour
         if (agent.enabled) agent.enabled = false;
         SetCollidersEnabled(false);
         HideShot();
+        PlayBitten();
 
         Vector3 look = biter.position - transform.position;
         look.y = 0f;
         if (look.sqrMagnitude > 0.001f) transform.rotation = Quaternion.LookRotation(look);
+    }
+
+    /// <summary>Struggles in the vampire's grip (if the controller has a Bitten state); the bite's kill then hands over to Death.</summary>
+    void PlayBitten()
+    {
+        if (animator == null) return;
+        bool hasBitten = false;
+        foreach (AnimatorControllerParameter p in animator.parameters)
+        {
+            if (p.name == "Bitten" && p.type == AnimatorControllerParameterType.Trigger) hasBitten = true;
+            else if (p.name == "Aiming" && p.type == AnimatorControllerParameterType.Bool) animator.SetBool("Aiming", false);
+            else if (p.name == "Speed" && p.type == AnimatorControllerParameterType.Float) animator.SetFloat("Speed", 0f);
+        }
+        if (!hasBitten) return;
+        if (hasHitAnim) animator.ResetTrigger(HitHash);   // a queued hit reaction must not cut the struggle short
+        if (hasBlockAnim) animator.SetBool(BlockingHash, false);
+        animator.SetTrigger("Bitten");
     }
 
     /// <summary>Called if the vampire lets go before the bite finishes (for example he is shot dead).</summary>
