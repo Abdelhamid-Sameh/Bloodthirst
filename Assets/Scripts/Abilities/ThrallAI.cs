@@ -476,7 +476,24 @@ IEnumerator MeleeRoutine(PoliceAI victim)
         else Die();
     }
 
-    /// <summary>The spell is over but he lives: he is an ordinary human / officer again, with his own AI back in charge.</summary>
+    /// <summary>
+    /// Ends the spell without touching his own AI, because the caller puts him back to a saved state itself
+    /// (CheckpointState, when the vampire respawns).
+    /// </summary>
+    public void Dismiss()
+    {
+        all.Remove(this);
+        StopAllCoroutines();
+        SetTinted(false);
+        if (tracer != null) Destroy(tracer.gameObject);
+        if (audioSource != null) Destroy(audioSource);
+        StopAgent();
+        enabled = false;
+        Destroy(this);
+    }
+
+    
+/// <summary>The spell is over but he lives: he is an ordinary human / officer again, with his own AI back in charge.</summary>
     void ReturnToNormal()
     {
         all.Remove(this);

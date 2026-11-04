@@ -389,7 +389,36 @@ private IEnumerator FleeAfter(float seconds)
 
 
 
-    /// <summary>Called when the bite (or a final blow) kills this human.</summary>
+    /// <summary>The raw health value (-1 = never hit). Saved by CheckpointState.</summary>
+    public float HealthRaw => health;
+
+    /// <summary>
+    /// Puts this human back to a saved state (used by CheckpointState when the vampire respawns): alive, calm, at the given place,
+    /// with the given health. Also brings back a human who died since.
+    /// </summary>
+    public void RestoreFromCheckpoint(Vector3 position, Quaternion rotation, float savedHealth)
+    {
+        StopAllCoroutines();
+        IsThrall = false;
+        enabled = true;
+        health = savedHealth;
+        transform.SetPositionAndRotation(position, rotation);
+
+        agent.enabled = true;
+        if (NavMesh.SamplePosition(position, out NavMeshHit hit, 2f, NavMesh.AllAreas)) agent.Warp(hit.position);
+
+        animator.enabled = true;   // the old tip-over fallback switches it off
+        animator.Rebind();         // back to the first (idle) state: a death pose is gone
+        animator.SetFloat("Speed", 0f);
+        if (hasHitAnim) animator.ResetTrigger(HitHash);
+        if (HasAnimatorParameter("Die")) animator.ResetTrigger("Die");
+
+        if (agent.isOnNavMesh) SetIdle();
+        else currentState = State.Idle;
+    }
+
+    
+/// <summary>Called when the bite (or a final blow) kills this human.</summary>
 public void OnKilled()
     {
         if (currentState == State.Dead) return;

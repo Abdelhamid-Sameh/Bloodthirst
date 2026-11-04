@@ -15,6 +15,14 @@ public class CorpseFade : MonoBehaviour
 
     void Awake() { ai = GetComponent<HumanAI>(); }
 
+    /// <summary>Called when the human is brought back by CheckpointState: stops any fade in progress, so he can die and fade again later.</summary>
+    public void ResetFade()
+    {
+        StopAllCoroutines();
+        started = false;
+    }
+
+
     void Update()
     {
         if (!started && ai.currentState == HumanAI.State.Dead) { started = true; StartCoroutine(Fade()); }

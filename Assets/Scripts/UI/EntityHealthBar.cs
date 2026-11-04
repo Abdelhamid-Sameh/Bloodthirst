@@ -72,6 +72,13 @@ public class EntityHealthBar : MonoBehaviour
     float deadTime = -1f;
     ThrallAI thrall;
     Image borderImage;
+    // Officers only: shows when he can be bitten (his health is at or below PoliceAI.biteHealthFraction).
+    Image tickImage, biteIcon;
+    RectTransform tickRect;
+    GameObject biteRing;
+    Material biteRingMaterial;
+    static Sprite fangSprite;
+    static Texture ringTexture;
 
 
 
@@ -91,8 +98,8 @@ void Start()
     }
 
     void OnEnable() { if (root != null) root.SetActive(true); }
-    void OnDisable() { if (root != null) root.SetActive(false); }
-    void OnDestroy() { if (root != null) Destroy(root); }
+    void OnDisable() { if (root != null) root.SetActive(false); if (biteRing != null) biteRing.SetActive(false); }
+    void OnDestroy() { if (root != null) Destroy(root); if (biteRing != null) Destroy(biteRing); }
 
     // ------------------------------------------------------------------ build
 
@@ -124,6 +131,7 @@ void Start()
         fillImage = AddImage("Fill", fillSprite, fullColor, new Vector2(FillMaxW, FillH), new Vector2(0f, 0.5f),
                              new Vector2(BorderThickness + FillPadding, 0f));
         fillRect = fillImage.rectTransform;
+        if (police != null) BuildBiteHints();
         canvas.enabled = false;
         UpdateFill();
     }
@@ -186,7 +194,109 @@ void Start()
         return found ? Mathf.Clamp(top, 1f, 3f) : 1.8f;
     }
 
-    // ------------------------------------------------------------------ per frame
+    // ------------------------------------------------------------------ "you can bite him now" (officers)
+
+    void BuildBiteHints()
+    {
+        // A thin white mark on the bar, at the health where he becomes bitable.
+        tickImage = AddImage("BiteMark", null, new Color(1f, 1f, 1f, 0.95f), new Vector2(5f, TrackH + 14f), new Vector2(0f, 0.5f), Vector2.zero);
+        tickRect = tickImage.rectTransform;
+        tickRect.pivot = new Vector2(0.5f, 0.5f);
+
+        // A red fang badge above the bar, only while he can be bitten.
+        if (fangSprite == null) fangSprite = MakeFangSprite(128);
+        biteIcon = AddImage("BiteIcon", fangSprite, Color.white, new Vector2(150f, 150f), new Vector2(0.5f, 1f), new Vector2(0f, 8f));
+        biteIcon.type = Image.Type.Simple;
+        biteIcon.rectTransform.pivot = new Vector2(0.5f, 0f);
+        biteIcon.gameObject.SetActive(false);
+
+        // A red ring on the ground under him: easy to spot from far away.
+        if (ringTexture == null) ringTexture = ThrallAbility.MakeCircleSprite(256, 0.5f, 0.40f).texture;
+        biteRing = GameObject.CreatePrimitive(PrimitiveType.Quad);
+        biteRing.name = name + "_BiteRing";
+        Destroy(biteRing.GetComponent<Collider>());
+        biteRing.transform.rotation = Quaternion.Euler(90f, 0f, 0f);   // lies on the ground
+        biteRingMaterial = new Material(Shader.Find("Sprites/Default")) { mainTexture = ringTexture };
+        Renderer rr = biteRing.GetComponent<Renderer>();
+        rr.sharedMaterial = biteRingMaterial;
+        rr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        rr.receiveShadows = false;
+        biteRing.SetActive(false);
+    }
+
+    void UpdateBiteHints(bool aliveAndFree)
+    {
+        if (police == null || tickImage == null) return;
+        bool isThrall = thrall != null;
+        bool biteReady = aliveAndFree && !isThrall && police.CanBeBitten;
+        float pulse = 0.5f + 0.5f * Mathf.Sin(Time.time * 7f);
+
+        // The mark shows where on the bar he can be bitten.
+        tickImage.gameObject.SetActive(!isThrall);
+        tickRect.anchoredPosition = new Vector2(BorderThickness + FillPadding + FillMaxW * police.biteHealthFraction, 0f);
+
+        // While he can be bitten: a pulsing red border, a bobbing fang badge, and a ring on the ground.
+        if (biteReady && borderImage != null) borderImage.color = Color.Lerp(new Color(1f, 0.1f, 0.1f), Color.white, pulse * 0.6f);
+        biteIcon.gameObject.SetActive(biteReady);
+        if (biteReady)
+        {
+            biteIcon.rectTransform.localScale = Vector3.one * (1f + 0.15f * pulse);
+            biteIcon.rectTransform.anchoredPosition = new Vector2(0f, 8f + 12f * pulse);
+        }
+        bool ringOn = biteReady && alpha > 0.01f;
+        biteRing.SetActive(ringOn);
+        if (ringOn)
+        {
+            biteRing.transform.position = transform.position + Vector3.up * 0.07f;
+            float size = 1.5f + 0.25f * pulse;
+            biteRing.transform.localScale = new Vector3(size, size, 1f);
+            biteRingMaterial.color = new Color(1f, 0.12f, 0.12f, (0.5f + 0.4f * pulse) * alpha);
+        }
+    }
+
+    /// <summary>A dark-red round badge with a white rim and two white fangs.</summary>
+    static Sprite MakeFangSprite(int size)
+    {
+        Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        tex.wrapMode = TextureWrapMode.Clamp;
+        tex.filterMode = FilterMode.Bilinear;
+        Color32[] px = new Color32[size * size];
+        float c = size * 0.5f;
+        Vector2[] left = { new Vector2(0.28f, 0.66f), new Vector2(0.48f, 0.66f), new Vector2(0.38f, 0.20f) };
+        Vector2[] right = { new Vector2(0.52f, 0.66f), new Vector2(0.72f, 0.66f), new Vector2(0.62f, 0.20f) };
+        for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float d = Mathf.Sqrt((x + 0.5f - c) * (x + 0.5f - c) + (y + 0.5f - c) * (y + 0.5f - c));
+                float disc = Mathf.Clamp01(c - 1f - d + 0.5f);
+                float rim = Mathf.Clamp01(d - (c - 10f) + 0.5f);
+                float fang = 0f;
+                for (int sy = 0; sy < 2; sy++)
+                    for (int sx = 0; sx < 2; sx++)
+                    {
+                        Vector2 p = new Vector2((x + (sx + 0.5f) / 2f) / size, (y + (sy + 0.5f) / 2f) / size);
+                        if (InTriangle(p, left) || InTriangle(p, right)) fang += 0.25f;
+                    }
+                Color col = Color.Lerp(new Color(0.60f, 0.03f, 0.06f), Color.white, Mathf.Max(rim, fang));
+                px[y * size + x] = new Color32((byte)(col.r * 255f), (byte)(col.g * 255f), (byte)(col.b * 255f), (byte)(disc * 255f));
+            }
+        tex.SetPixels32(px);
+        tex.Apply(false, true);
+        return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f);
+    }
+
+    static bool InTriangle(Vector2 p, Vector2[] t)
+    {
+        float d1 = Side(p, t[0], t[1]), d2 = Side(p, t[1], t[2]), d3 = Side(p, t[2], t[0]);
+        bool neg = d1 < 0f || d2 < 0f || d3 < 0f;
+        bool pos = d1 > 0f || d2 > 0f || d3 > 0f;
+        return !(neg && pos);
+    }
+
+    static float Side(Vector2 p1, Vector2 p2, Vector2 p3) => (p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y);
+
+    
+// ------------------------------------------------------------------ per frame
 
 void LateUpdate()
     {
@@ -204,6 +314,7 @@ void LateUpdate()
         }
 
         ReadState(out bool alive, out bool captured, out float fraction);
+        UpdateBiteHints(alive && !captured);
 
         // Float above his head and face the screen.
         root.transform.position = transform.position + Vector3.up * (headTop + heightAboveHead + extraHeight);
@@ -346,6 +457,10 @@ public class EntityHealthBarInstaller : MonoBehaviour
     {
         if (Time.unscaledTime < nextScan) return;
         nextScan = Time.unscaledTime + 1f;
+        // Every officer shows when his shield is up and when it blocks a blow (independent of the health bars).
+        foreach (PoliceAI officer in FindObjectsByType<PoliceAI>(FindObjectsSortMode.None))
+            if (officer.GetComponent<OfficerGuardFeedback>() == null) officer.gameObject.AddComponent<OfficerGuardFeedback>();
+
         if (!autoInstall || !AutoInstall) return;
 
         foreach (HumanAI h in FindObjectsByType<HumanAI>(FindObjectsSortMode.None))

@@ -209,7 +209,7 @@ void BuildBubble()
     }
 
     /// <summary>A soft round bubble: almost clear in the middle, brighter toward the rim.</summary>
-    static Texture2D MakeBubbleTexture(int size)
+    internal static Texture2D MakeBubbleTexture(int size)
     {
         Texture2D tex = ThrallAbility.NewTexture(size, size);
         Color32[] px = new Color32[size * size];
@@ -299,7 +299,7 @@ void BuildBubble()
     }
 
     /// <summary>A honeycomb of thin glowing lines, faint in the middle and strong toward the rim.</summary>
-    static Texture2D MakeHexTexture(int size)
+    internal static Texture2D MakeHexTexture(int size)
     {
         Texture2D tex = ThrallAbility.NewTexture(size, size);
         Color32[] px = new Color32[size * size];
@@ -470,7 +470,7 @@ void BuildBubble()
     }
 
     /// <summary>Is the point (u, v) inside a shield scaled by s? Flat top, sides curving in to a point at the bottom.</summary>
-    static bool InShield(float u, float v, float s)
+    internal static bool InShield(float u, float v, float s)
     {
         float x = (u - 0.5f) / s, y = (v - 0.52f) / s;
         if (y > 0.36f || y < -0.40f) return false;

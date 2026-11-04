@@ -118,6 +118,7 @@ public class GameUI : MonoBehaviour
             else if (!vampire.IsBusy && !vampire.AbilityAiming)   // the ability prompt takes over while aiming
             {
                 if (vampire.BiteTargetInReach != null) { key = "E"; label = "Bite"; }
+                else if (vampire.StrongOfficerInReach) { key = "Q"; label = "Weaken him to bite"; }   // an officer can only be bitten once his health is low
                 else if (vampire.CoffinInReach != null) { key = "F"; label = "Rest in coffin"; }
             }
         }

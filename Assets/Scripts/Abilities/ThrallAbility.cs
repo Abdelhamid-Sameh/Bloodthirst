@@ -1076,6 +1076,10 @@ public class ThrallAbilityInstaller : MonoBehaviour
     Ensure<BloodLeapAbility>(vampire);
     Ensure<VampireMana>(vampire);
     Ensure<LightExposure>(vampire);
+    Ensure<CheckpointState>(vampire);
+
+    
+
     AbilityHUD.EnsureToast();
 }
 

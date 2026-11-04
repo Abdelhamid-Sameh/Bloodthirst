@@ -19,6 +19,10 @@ public class VampireMana : MonoBehaviour
     public float Current { get; private set; }
     public float Fraction => maxMana > 0f ? Current / maxMana : 0f;
 
+    /// <summary>Puts the mana back to a saved value (CheckpointState).</summary>
+    public void Restore(float value) => Current = Mathf.Clamp(value, 0f, maxMana);
+
+
     /// <summary>The vampire's mana (null before he exists).</summary>
     public static VampireMana Instance { get; private set; }
 

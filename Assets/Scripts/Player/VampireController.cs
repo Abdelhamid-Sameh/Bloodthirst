@@ -72,6 +72,11 @@ public class VampireController : MonoBehaviour
     public float[] hitTimes = { 0.17f, 0.30f, 0.47f, 0.58f };
     [Tooltip("Point in the attack animation (0-1) where he is free to move again. The full combo lasts 4.7 s; 0.68 ends it after the big punch.")]
     [Range(0, 1)] public float attackEndNormalizedTime = 0.68f;
+    [Tooltip("How fast the fighting animation plays (1 = as recorded). The recorded combo is long, so it is sped up. The blows and the end of the swing follow along.")]
+    public float attackAnimationSpeed = 1.5f;
+    [Tooltip("Once this many blows of the combo have landed, pressing a movement key cancels the rest of it and gives him back at once. 0 = the combo always plays out.")]
+    public int cancelAfterBlows = 1;
+
     [Tooltip("Seconds he must wait after a swing before he can swing again.")]
     public float attackCooldown = 0.3f;
     [Tooltip("Only used while the Animator has no Attack animation yet: how long a swing lasts.")]
@@ -161,6 +166,8 @@ public class VampireController : MonoBehaviour
     BiteTarget biteTarget;
     BiteTarget currentVictim;
     float nextAttackTime;
+    bool attackCancelRequested;
+
     bool hasAttackAnim; // true once the Animator has an "Attack" trigger (and state) set up
     bool hasHitAnim;    // same for the "Hit" (getting hit) reaction
     float nextHitReactionTime;
@@ -258,6 +265,7 @@ public class VampireController : MonoBehaviour
 
         bool grounded = IsGroundedForActions();
         biteTarget = grounded ? FindVictim() : null;
+        if (!grounded) StrongOfficerInReach = false;
         CoffinInReach = grounded ? FindNearestCoffin(transform.position, coffinRange) : null;
 
         bool bitePressed = !AbilityAiming && (kb.eKey.wasPressedThisFrame || (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame));
@@ -430,14 +438,25 @@ public class VampireController : MonoBehaviour
     /// <summary>Bites this human at once, wherever he stands (Blood Leap, after landing next to him). Feeds like a normal bite.</summary>
     public Coroutine BiteHuman(HumanAI human) => StartCoroutine(BiteRoutine(new BiteTarget(human)));
 
+/// <summary>True while an officer is within bite reach but still too healthy to bite (he must be worn down first). The HUD shows a hint.</summary>
+    public bool StrongOfficerInReach { get; private set; }
+
     BiteTarget FindVictim()
     {
         BiteTarget best = null;
         float bestDistance = biteRange;
+        StrongOfficerInReach = false;
         foreach (HumanAI human in FindObjectsByType<HumanAI>(FindObjectsSortMode.None))
             if (human.CanBeBitten && InBiteReach(human.transform, ref bestDistance)) best = new BiteTarget(human);
         foreach (PoliceAI officer in FindObjectsByType<PoliceAI>(FindObjectsSortMode.None))
+        {
             if (officer.CanBeBitten && InBiteReach(officer.transform, ref bestDistance)) best = new BiteTarget(officer);
+            else if (officer.CanBeHit && !officer.IsWeakEnoughToBite)
+            {
+                float reach = biteRange;
+                if (InBiteReach(officer.transform, ref reach)) StrongOfficerInReach = true;
+            }
+        }
         return best;
     }
 
@@ -521,22 +540,44 @@ IEnumerator AttackRoutine()
         {
             // The fighting animation is a combo: every point in hitTimes lands a blow.
             int nextHit = 0;
+            bool cancelled = false;
+            attackCancelRequested = false;
+            bool movingAtStart = MoveKeyHeld(Keyboard.current);
             animator.ResetTrigger(AttackHash);
             animator.SetTrigger(AttackHash);
-            yield return WaitForAction(AttackState, t =>
+            animator.speed = Mathf.Max(0.1f, attackAnimationSpeed);   // the recorded combo is slow, so it plays faster
+            try
             {
-                // Keep facing the target while he is pushed around by the blows.
-                if (CanFight(target))
+                yield return WaitForAction(AttackState, t =>
                 {
-                    FaceFlat(target.transform.position, runTurnSpeed);
-                    HoldInFront(target, 15f * Time.deltaTime);
-                }
-                while (hitTimes != null && nextHit < hitTimes.Length && t >= hitTimes[nextHit])
-                {
-                    nextHit++;
-                    DealAttackDamage();
-                }
-            }, attackEndNormalizedTime);
+                    if (cancelled) return;   // no more blows: the final report at the end of the wait must not deal the rest
+
+                    // Keep facing the target while he is pushed around by the blows.
+                    if (CanFight(target))
+                    {
+                        FaceFlat(target.transform.position, runTurnSpeed);
+                        HoldInFront(target, 15f * Time.deltaTime);
+                    }
+                    while (hitTimes != null && nextHit < hitTimes.Length && t >= hitTimes[nextHit])
+                    {
+                        nextHit++;
+                        DealAttackDamage();
+                    }
+
+                    // After the first blows, pressing a movement key cancels the rest of the combo: a fresh press, or any press if he
+                    // was standing still when the attack began (so holding a direction while attacking does not cancel by accident).
+                    if (cancelAfterBlows > 0 && nextHit >= cancelAfterBlows && t < 1f)
+                    {
+                        Keyboard kb = Keyboard.current;
+                        if (attackCancelRequested || MoveKeyPressedThisFrame(kb) || (!movingAtStart && MoveKeyHeld(kb))) cancelled = true;
+                    }
+                }, attackEndNormalizedTime, () => cancelled);
+            }
+            finally
+            {
+                animator.speed = 1f;
+            }
+            if (cancelled) animator.CrossFadeInFixedTime(IdleState, 0.12f, 0);   // out of the combo at once: movement takes over from idle
         }
         else
         {
@@ -550,6 +591,21 @@ IEnumerator AttackRoutine()
         nextAttackTime = Time.time + attackCooldown;
         IsBusy = false;
     }
+
+    /// <summary>
+    /// Asks a combo in progress to end after the blows that have already landed (cancelAfterBlows still applies: if the combo has not got
+    /// that far yet, it ends right after that blow). Movement keys do the same; abilities can call this too.
+    /// </summary>
+    public void CancelAttack() => attackCancelRequested = true;
+
+    
+static bool MoveKeyHeld(Keyboard kb) =>
+        kb != null && (kb.wKey.isPressed || kb.aKey.isPressed || kb.sKey.isPressed || kb.dKey.isPressed
+                       || kb.upArrowKey.isPressed || kb.downArrowKey.isPressed || kb.leftArrowKey.isPressed || kb.rightArrowKey.isPressed);
+
+    static bool MoveKeyPressedThisFrame(Keyboard kb) =>
+        kb != null && (kb.wKey.wasPressedThisFrame || kb.aKey.wasPressedThisFrame || kb.sKey.wasPressedThisFrame || kb.dKey.wasPressedThisFrame
+                       || kb.upArrowKey.wasPressedThisFrame || kb.downArrowKey.wasPressedThisFrame || kb.leftArrowKey.wasPressedThisFrame || kb.rightArrowKey.wasPressedThisFrame);
 
     /// <summary>Hurts every living officer inside the swing's range and arc.</summary>
 void DealAttackDamage()
@@ -917,7 +973,7 @@ if (!flinchOnHit) return; // being stun-locked by every bullet made fights unwin
     // ---------------------------------------------------------------- helpers
 
     /// <summary>Waits until the given animator state has played (or a safety timeout), reporting its progress 0-1.</summary>
-IEnumerator WaitForAction(string stateName, System.Action<float> onProgress, float endAt = 0.92f)
+IEnumerator WaitForAction(string stateName, System.Action<float> onProgress, float endAt = 0.92f, System.Func<bool> stopEarly = null)
     {
         float waited = 0f;
         while (waited < 0.75f && !animator.GetCurrentAnimatorStateInfo(0).IsName(stateName))
@@ -932,6 +988,7 @@ IEnumerator WaitForAction(string stateName, System.Action<float> onProgress, flo
             AnimatorStateInfo info = animator.GetCurrentAnimatorStateInfo(0);
             if (!info.IsName(stateName)) break;
             onProgress?.Invoke(info.normalizedTime);
+            if (stopEarly != null && stopEarly()) yield break;   // cancelled: skip the final report below
             if (info.normalizedTime >= endAt) break;
             safety -= Time.deltaTime;
             yield return null;

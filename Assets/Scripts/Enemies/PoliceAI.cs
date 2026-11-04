@@ -65,12 +65,22 @@ public class PoliceAI : MonoBehaviour
     public float punchHitTime = 0.32f;
     [Tooltip("How long one punch keeps him busy (the length of the punch animation).")]
     public float punchDuration = 1f;
-    [Tooltip("Chance (0-1) that he raises his shield when the vampire attacks him.")]
+    [Tooltip("Chance (0-1) that he decides to raise his shield when the vampire starts an attack on him. 1 = every attack, 0 = never. (When he actually raises it is random: see Block Reaction Min / Max.)")]
     [Range(0f, 1f)] public float blockChance = 0.6f;
-    [Tooltip("Seconds the shield stays up (the body block animation lasts 3.4 s).")]
+    [Tooltip("The longest the shield stays up (seconds). Each time it is a random length between Block Duration Min and this. The body block animation lasts 3.4 s.")]
     public float blockDuration = 3f;
-    [Tooltip("Seconds he must wait after lowering the shield before he can raise it again.")]
+    [Tooltip("The shortest wait (seconds) after lowering the shield before he can raise it again. Each time it is a random wait between this and Block Cooldown Max.")]
     public float blockCooldown = 2f;
+    [Tooltip("He does not raise the shield the instant the vampire attacks. After deciding to, he reacts after a random time between Block Reaction Min and Max (seconds), so sometimes the first blows land before the shield is up.")]
+    public float blockReactionMin = 0.1f;
+    public float blockReactionMax = 1.0f;
+    [Tooltip("The shortest the shield stays up (seconds). The longest is Block Duration.")]
+    public float blockDurationMin = 1.2f;
+    [Tooltip("The longest wait (seconds) after lowering the shield before he can raise it again. The shortest is Block Cooldown.")]
+    public float blockCooldownMax = 4f;
+    [Tooltip("Chance (0-1) that an officer who is not guarding raises his shield after a blow lands on him. 0 = he only guards when the vampire starts an attack.")]
+    [Range(0f, 1f)] public float blockWhenHitChance = 0.25f;
+
     [Tooltip("While the shield is up, blows only do this fraction of their damage and do not make him flinch.")]
     [Range(0f, 1f)] public float blockedDamageMultiplier = 0.25f;
 
@@ -145,6 +155,8 @@ public class PoliceAI : MonoBehaviour
     bool hasPunchAnim, hasBlockAnim;
     bool isPunching, wasVampireBusy;
     float punchEndTime, nextMeleeTime, blockUntil, nextBlockTime;
+    float pendingBlockAt, nextBlockRollTime;   // pendingBlockAt: when the shield goes up (0 = no guard planned)
+
     bool hasHitAnim;
     float nextHitAnimTime;
     float staggerUntil;
@@ -220,6 +232,14 @@ public class PoliceAI : MonoBehaviour
     void Update()
     {
         if (currentState == State.Dead || currentState == State.Captured || vampire == null) return;
+
+        // A planned guard goes up after the officer's reaction time (this runs even while he is held still for the fight).
+        if (pendingBlockAt > 0f && Time.time >= pendingBlockAt)
+        {
+            pendingBlockAt = 0f;
+            if (enableMelee) StartBlock();
+        }
+
 
         if (tracer.enabled && Time.time >= tracerHideTime)
         {
@@ -635,6 +655,59 @@ public class PoliceAI : MonoBehaviour
         hasSpot = false;
     }
 
+/// <summary>True while his shield is up (he took the guard stance when the vampire attacked). See OfficerGuardFeedback.</summary>
+    public bool IsBlocking => enableMelee && Time.time < blockUntil;
+    /// <summary>Fires when a blow lands on his raised shield. The argument is the damage that got through.</summary>
+    public event System.Action<float> BlockedHit;
+
+/// <summary>The raw health value (-1 = never hit). Saved by CheckpointState.</summary>
+    public float HealthRaw => health;
+
+    /// <summary>
+    /// Puts this officer back to a saved state (used by CheckpointState when the vampire respawns): alive, calm and unalerted,
+    /// at the given place, with the given health. Also brings back an officer who died since.
+    /// </summary>
+    public void RestoreFromCheckpoint(Vector3 position, Quaternion rotation, float savedHealth)
+    {
+        StopAllCoroutines();
+        IsThrall = false;
+        enabled = true;
+        blockUntil = 0f;
+        nextBlockTime = 0f;
+        pendingBlockAt = 0f;
+        nextBlockRollTime = 0f;
+        isPunching = false;
+        staggerUntil = 0f;
+        wasStaggered = false;
+        engaged = false;
+        hasSpot = false;
+        health = savedHealth;
+        ReleaseFireToken();
+        HideShot();
+
+        transform.SetPositionAndRotation(position, rotation);
+        SetCollidersEnabled(true);
+        agent.enabled = true;
+        if (NavMesh.SamplePosition(position, out NavMeshHit hit, 2f, NavMesh.AllAreas)) agent.Warp(hit.position);
+
+        if (animator != null)
+        {
+            animator.enabled = true;
+            animator.Rebind();   // back to the first state: a death pose is gone
+            animator.SetFloat(SpeedHash, 0f);
+            animator.SetBool(AimingHash, false);
+            if (hasBlockAnim) animator.SetBool(BlockingHash, false);
+            if (hasHitAnim) animator.ResetTrigger(HitHash);
+            animator.ResetTrigger(DieHash);
+        }
+
+        currentState = State.Idle;
+        lastMoveTime = Time.time;
+        if (vampire != null) lastVampirePos = vampire.position;
+        StopMoving();
+    }
+
+    
 /// <summary>Called when the vampire hits this officer in a fight. Wears his health down (enough blows kill him), staggers him and shoves him back.</summary>
 public void TakeHit(float amount, Transform attacker)
     {
@@ -642,7 +715,11 @@ public void TakeHit(float amount, Transform attacker)
         if (health < 0f) health = maxHealth;
 
         // Enough blows kill him - but a beaten corpse gives no blood, only a bite does.
-        if (enableMelee && Time.time < blockUntil) amount *= blockedDamageMultiplier; // the shield soaks most of the blow
+        if (enableMelee && Time.time < blockUntil)
+        {
+            amount *= blockedDamageMultiplier;   // the shield soaks most of the blow
+            BlockedHit?.Invoke(amount);          // so the player can see it was blocked
+        }
         // A blow only kills an officer who was already weak enough to bite, so a fight always leaves a moment to bite.
         bool lastLegs = IsWeakEnoughToBite;
         health = Mathf.Max(lastLegs ? 0f : Mathf.Min(1f, maxHealth), health - amount);
@@ -651,7 +728,9 @@ public void TakeHit(float amount, Transform attacker)
         // Being hit makes the officer notice the vampire even if he was standing still.
         engaged = true;
         lastMoveTime = Time.time;
-        if (enableMelee && Time.time < blockUntil) return; // guard up: the blow does not make him flinch
+        if (enableMelee && Time.time >= blockUntil) ConsiderBlock(blockWhenHitChance);   // hit without a guard: he may raise it now (after his reaction time)
+        
+if (enableMelee && Time.time < blockUntil) return; // guard up: the blow does not make him flinch
         isPunching = false;
 
         // Stagger: no shooting or walking while the hit reaction plays, and a small push away from the attacker.
@@ -757,7 +836,7 @@ public void TakeHit(float amount, Transform attacker)
     public void HoldForFight(float seconds)
     {
         staggerUntil = Mathf.Max(staggerUntil, Time.time + seconds);
-        if (enableMelee) ConsiderBlock(); // the vampire is about to attack him: maybe raise the shield
+        if (enableMelee) ConsiderBlock(blockChance); // the vampire is about to attack him: maybe plan to raise the shield
     }
     // ------------------------------------------------------------ melee & shield
 
@@ -769,7 +848,7 @@ public void TakeHit(float amount, Transform attacker)
         // Every new action of the vampire (a swing, a bite...) may make the officer raise his guard.
         bool vampireBusy = vampireController != null && vampireController.IsBusy && !vampireController.IsDead;
         bool inReach = FlatDistance(transform.position, vampire.position) <= meleeRange;
-        if (vampireBusy && !wasVampireBusy && inReach) ConsiderBlock();
+        if (vampireBusy && !wasVampireBusy && inReach) ConsiderBlock(blockChance);
         wasVampireBusy = vampireBusy;
 
         if (Time.time < blockUntil)
@@ -839,20 +918,25 @@ public void TakeHit(float amount, Transform attacker)
         }
     }
 
-    /// <summary>Rolls the dice: with chance blockChance the officer raises his shield (not more often than blockCooldown).</summary>
-    void ConsiderBlock()
+    /// <summary>Rolls the dice: with the given chance the officer plans to raise his shield. He reacts after a random delay (pendingBlockAt), the shield stays up for a random time, and he has to wait a random time before the next one.</summary>
+void ConsiderBlock(float chance)
     {
-        if (Time.time < nextBlockTime || Time.time < blockUntil) return;
-        nextBlockTime = Time.time + blockCooldown;
-        if (Random.value > blockChance) return;
-        StartBlock();
+        // One decision per moment: the vampire's attack makes several calls at once and they must not each roll the dice.
+        if (Time.time < nextBlockRollTime) return;
+        if (Time.time < nextBlockTime || Time.time < blockUntil || pendingBlockAt > 0f) return;
+        nextBlockRollTime = Time.time + 1f;
+        if (Random.value > chance) return;
+
+        // He decided to guard, but it takes him a random moment to react.
+        pendingBlockAt = Time.time + Random.Range(blockReactionMin, Mathf.Max(blockReactionMin, blockReactionMax));
     }
 
-    void StartBlock()
+void StartBlock()
     {
         if (currentState == State.Dead || currentState == State.Captured) return;
-        blockUntil = Time.time + blockDuration;
-        nextBlockTime = blockUntil + blockCooldown;
+        // Each guard lasts a random time, and he has to wait a random time before he can guard again.
+        blockUntil = Time.time + Random.Range(Mathf.Min(blockDurationMin, blockDuration), blockDuration);
+        nextBlockTime = blockUntil + Random.Range(blockCooldown, Mathf.Max(blockCooldown, blockCooldownMax));
         isPunching = false;
         StopMoving();
     }
