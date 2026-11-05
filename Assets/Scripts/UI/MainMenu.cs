@@ -470,7 +470,7 @@ public class MainMenu : MonoBehaviour
         {
             { "I", "BLOOD IS LIFE", "Your blood drains every second, faster when you sprint. Bite humans to drink. An empty vein is a second death." },
             { "II", "FEAR THE LAMPLIGHT", "Lamp light burns you: you smoke and bleed out far faster. Keep to the shadows. A dead lamp is safe." },
-            { "III", "POWER IS EARNED", "Mana only comes from landing blows. Spend it on Blood Leap (humans only), Shield, and Shadow Bite (it turns a victim but gives no blood)." },
+            { "III", "POWER IS EARNED", "Mana comes only from landing blows. Blood Leap works on humans only; Shadow Bite gives no blood." },
             { "IV", "THE LAW HUNTS YOU", "Officers shoot on sight and raise their shields. Wound one before you drink; beat anyone to death and the blood is wasted." },
             { "V", "COFFINS ARE SANCTUARY", "Rest in a coffin to recover blood and mark where you rise again. Climbing out, you are untouchable for a moment." },
             { "VI", "FOLLOW THE BLOOD", "A trail of blood on the street leads to what waits for you tonight." },
@@ -503,7 +503,7 @@ public class MainMenu : MonoBehaviour
             new[] { "F", "|Rest in a coffin (checkpoint)" },
             new[] { "1", "|Blood Leap: leap onto a human, not police  (20 mana)" },
             new[] { "2", "|Shield: block all damage for 10 s  (30 mana)" },
-            new[] { "3", "|Shadow Bite: turn a victim to fight for you, no blood  (50 mana)" },
+            new[] { "3", "|Shadow Bite: turn a victim, gives no blood  (50 mana)" },
             new[] { "Esc", "|Pause" },
         };
         for (int i = 0; i < rows.Length; i++)

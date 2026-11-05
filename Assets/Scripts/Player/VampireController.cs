@@ -217,6 +217,7 @@ public class VampireController : MonoBehaviour
     // While dead nothing may pull him out of the dying pose (a stale Jump/Bite/Hit trigger used to win over Die).
     void LateUpdate()
     {
+        ApplyCapeReset();
         if (!IsDead || animator == null) return;
         ResetActionTriggers();
         bool dying = animator.GetCurrentAnimatorStateInfo(0).IsName("Dying") || (animator.IsInTransition(0) && animator.GetNextAnimatorStateInfo(0).IsName("Dying"));
@@ -895,7 +896,7 @@ if (!flinchOnHit) return; // being stun-locked by every bullet made fights unwin
         controller.enabled = false;
         transform.SetPositionAndRotation(position, rotation);
         controller.enabled = wasEnabled;
-        if (capeCloth != null) capeCloth.ClearTransformMotion();
+        ResetCape();
     }
 
     // Lying down, the simulated cape sags through the coffin; unsimulated it simply follows the body.
@@ -903,19 +904,37 @@ if (!flinchOnHit) return; // being stun-locked by every bullet made fights unwin
     {
         if (capeCloth == null) return;
         capeCloth.enabled = on;
-        if (on) capeCloth.ClearTransformMotion();
+        if (on) { capeReadyFrame = Time.frameCount + 1; ResetCape(); }
     }
 
     void SetCapeVisible(bool visible)
     {
         if (capeCloth != null && capeCloth.TryGetComponent(out Renderer r)) r.enabled = visible;
+        if (visible) capeReadyFrame = Time.frameCount + 1;
+    }
+
+    // Cloth.ClearTransformMotion crashes the built player (not the editor) if it runs in the same frame the cloth
+    // or its renderer was switched on, so the reset is only requested here and done in LateUpdate once the cloth is live.
+    bool capeResetPending;
+    int capeReadyFrame;
+
+    void ResetCape() { if (capeCloth != null) capeResetPending = true; }
+
+    void ApplyCapeReset()
+    {
+        if (!capeResetPending || capeCloth == null) return;
+        if (!capeCloth.enabled || !capeCloth.gameObject.activeInHierarchy) { capeResetPending = false; return; }   // nothing to clear
+        if (Time.frameCount <= capeReadyFrame) return;
+        if (!capeCloth.TryGetComponent(out SkinnedMeshRenderer smr) || !smr.enabled) return;
+        capeResetPending = false;
+        capeCloth.ClearTransformMotion();
     }
 
     void SetVisible(bool visible)
     {
         foreach (Renderer r in visibleRenderers)
             if (r != null) r.enabled = visible;
-        if (visible && capeCloth != null) capeCloth.ClearTransformMotion();
+        if (visible) { capeReadyFrame = Time.frameCount + 1; ResetCape(); }
     }
 
     void SpawnVanishEffect(Vector3 position)
