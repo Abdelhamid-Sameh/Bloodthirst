@@ -120,6 +120,7 @@ public class GameUI : MonoBehaviour
                 if (vampire.BiteTargetInReach != null) { key = "E"; label = "Bite"; }
                 else if (vampire.StrongOfficerInReach) { key = "Q"; label = "Weaken him to bite"; }   // an officer can only be bitten once his health is low
                 else if (vampire.CoffinInReach != null) { key = "F"; label = "Rest in coffin"; }
+                else { Interactable use = Interactable.InReach(vampire); if (use != null) { key = "F"; label = use.label; } }   // Level 2: levers, doors, documents
             }
         }
 
