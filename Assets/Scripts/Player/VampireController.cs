@@ -967,6 +967,14 @@ if (!flinchOnHit) return; // being stun-locked by every bullet made fights unwin
         onDeath.Invoke();
     }
 
+    /// <summary>Where he gets up when there is no coffin to rise from (Level 2's room checkpoints set this).</summary>
+    public void SetRespawnPoint(Vector3 position, Quaternion rotation)
+    {
+        fallbackRespawnPosition = position;
+        fallbackRespawnRotation = rotation;
+        respawnCoffin = null;
+    }
+
     /// <summary>Bring the vampire back: he rises from the last coffin he rested in.</summary>
     public void Respawn()
     {
@@ -986,6 +994,8 @@ if (!flinchOnHit) return; // being stun-locked by every bullet made fights unwin
             PlaceAt(fallbackRespawnPosition, fallbackRespawnRotation);
             verticalVelocity = 0f;
             if (viewCamera != null && viewCamera.TryGetComponent(out IsometricCamera iso)) iso.SnapToTarget();
+            protectedUntil = Time.time + emergeProtection;
+            onEmerged.Invoke();   // no coffin to rise from: he is simply back (full blood, stamina)
         }
     }
 
