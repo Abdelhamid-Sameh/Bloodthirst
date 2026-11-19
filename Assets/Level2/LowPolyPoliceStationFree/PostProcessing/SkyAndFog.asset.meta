@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 4bc2072a3c2ee1343abd704abcb3448a
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 389396
+  packageName: Free-LowPolyPoliceStation
+  packageVersion: 1.0
+  assetPath: Assets/ThinkixStudios/LowPolyPoliceStationFree/PostProcessing/SkyAndFog.asset
+  uploadId: 942350

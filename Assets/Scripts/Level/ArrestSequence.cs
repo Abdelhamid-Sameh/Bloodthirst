@@ -34,6 +34,10 @@ public class ArrestSequence : MonoBehaviour
     public CanvasGroup black;
     public CanvasGroup endCard;
     public TMP_Text statsText;
+    [Tooltip("Scene loaded after the end card (empty = the game stays on the card).")]
+    public string nextScene = "Level2_Station";
+    [Tooltip("Seconds the end card stays before the next level loads.")]
+    public float endCardHold = 5f;
 
     [Header("Audio (Assets/Audio/Arrest, optional)")]
     public AudioClip siren;
@@ -208,6 +212,16 @@ public class ArrestSequence : MonoBehaviour
         }
         Cursor.visible = true;
         Cursor.lockState = CursorLockMode.None;
+        if (!string.IsNullOrEmpty(nextScene)) StartCoroutine(LoadNextLevel());
+    }
+
+    // Level 2 opens with him waking in a cell of the station he was just dragged into.
+    IEnumerator LoadNextLevel()
+    {
+        yield return new WaitForSecondsRealtime(endCardHold);
+        if (endCard != null) StartCoroutine(Fade(endCard, 0f, 1f));
+        if (black != null) yield return Fade(black, 1f, 1f);
+        UnityEngine.SceneManagement.SceneManager.LoadScene(nextScene);
     }
 
     static float Angle(Vector3 p, Vector3 center) => Mathf.Atan2(p.x - center.x, p.z - center.z) * Mathf.Rad2Deg;

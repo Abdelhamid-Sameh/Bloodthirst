@@ -9,7 +9,8 @@ using UnityEngine.UI;
 /// Knows the current stage, gets him up at the last RoomCheckpoint after he dies, and moves him between areas with a fade.
 /// Listen to onStageChanged to start your part; call Advance to move on; call BossDefeated when the armored officer falls.
 /// Blood does not drain in Level 2 (VampireBlood drain is 0 in this scene: the police serum). Damage and bites still count.
-/// Debug (vampire's debugKeys on): F5..F10 jump to each checkpoint in order, F11 = the boss is beaten.
+/// Debug (vampire's debugKeys on): F5..F10 jump to each checkpoint in order, F11 = the boss is beaten,
+/// F4 = out of cell 1 (temporary, until the teleport escape exists).
 /// </summary>
 public class Level2Director : MonoBehaviour
 {
@@ -24,6 +25,8 @@ public class Level2Director : MonoBehaviour
     public float respawnDelay = 3f;
     [Tooltip("The checkpoints in level order (debug keys jump to them).")]
     public RoomCheckpoint[] checkpoints = new RoomCheckpoint[0];
+    [Tooltip("TEMPORARY (debug key F4): just outside cell 1's bars, until Ali's teleport escape is in. Remove then.")]
+    public Vector3 debugCellExit = new Vector3(4.5f, 0.05f, 1.6f);
 
     /// <summary>How close the camera sits and how eagerly it hides things that block the view.</summary>
     [System.Serializable]
@@ -162,9 +165,14 @@ public class Level2Director : MonoBehaviour
     void Place(RoomCheckpoint checkpoint)
     {
         Transform to = checkpoint.spawnPoint != null ? checkpoint.spawnPoint : checkpoint.transform;
+        PlaceAt(to.position, to.rotation);
+    }
+
+    void PlaceAt(Vector3 position, Quaternion rotation)
+    {
         var body = vampire.GetComponent<CharacterController>();
         body.enabled = false;   // a CharacterController overrides a direct position change
-        vampire.transform.SetPositionAndRotation(to.position, to.rotation);
+        vampire.transform.SetPositionAndRotation(position, rotation);
         body.enabled = true;
         var cam = FindFirstObjectByType<IsometricCamera>();
         if (cam != null) cam.SnapToTarget();
@@ -185,6 +193,7 @@ public class Level2Director : MonoBehaviour
             SetStage(checkpoints[i].stage);
         }
         if (kb.f11Key.wasPressedThisFrame) BossDefeated();
+        if (kb.f4Key.wasPressedThisFrame) PlaceAt(debugCellExit, Quaternion.Euler(0f, 180f, 0f));
     }
 
     void BuildFade()
