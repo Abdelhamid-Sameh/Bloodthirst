@@ -34735,9 +34735,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Placeholder
   owner: Room 2
-  task: 'Corridor: three officers burst in through the squad door. No one else here.
-    When all three are down: the Throw ability unlocks (LevelToast ''New ability:
-    Throw'').'
+  task: 'Corridor: three officers burst in through the squad door. Call CorridorAlarm.Trigger()
+    as they burst in and CorridorAlarm.Stop() when all three are down (the alarm
+    also fades out by itself after 12 s). When all three are down: the Throw ability
+    unlocks (LevelToast ''New ability: Throw''). Remove the stand-in alarm call on
+    CP_2_Corridor.onReached then.'
   color: {r: 0.3, g: 0.6, b: 1, a: 1}
 --- !u!1 &1087440356
 GameObject:
@@ -56389,16 +56391,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ReadableNote
   title: Memo
-  body: 'DRAFT (Abdelhamid: final text)
+  body: 'The one they caught on the high street is the first live subject we have
+    ever held.
 
 
-    The one they caught on the high street
-    is the first live subject we have ever held.
-
-
-    If H-7 holds, every station
-    gets a supply. Transfer at dawn. If he wakes, seal the corridor and call the
-    courtyard squad.'
+    If H-7 holds, every station gets a supply. Transfer at dawn.
+    If he wakes, seal the corridor and call the courtyard squad.'
 --- !u!23 &1662626094
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -65685,19 +65683,16 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ReadableNote
   title: Report H-7
-  body: 'DRAFT (Abdelhamid: final text)
+  body: 'Serum H-7 works. The subject in cell 1 has stopped burning through blood:
+    the hunger, the decay, the clock, all of it stops.
 
 
-    Serum H-7 works. The subject in cell
-    1 has stopped burning through blood: the hunger, the decay, the clock, all of
-    it stops.
+    Side effect: he is weak.
+    No reserve, no tricks. He sleeps most of the day.
 
 
-    Side effect: he is weak. No reserve, no tricks. He sleeps most
-    of the day.
-
-
-    Keep him sedated until the transfer. Do NOT feed him.'
+    Keep him sedated until
+    the transfer. Do NOT feed him.'
 --- !u!23 &1964836911
 MeshRenderer:
   m_ObjectHideFlags: 0
