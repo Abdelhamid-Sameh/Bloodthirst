@@ -17030,7 +17030,7 @@ GameObject:
   - component: {fileID: 432339165}
   - component: {fileID: 432339166}
   m_Layer: 0
-  m_Name: Throwables
+  m_Name: ThrowAbility_TestHere
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -17064,7 +17064,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Placeholder
   owner: Room 2
-  task: Objects he can pick up and throw (chairs, extinguishers...).
+  task: 'Throw: the vampire''s OWN projectile that he always carries (like Batman''s
+    batarang), thrown at the mouse. Nothing is picked up from the room. Test it on
+    the squad here.'
   color: {r: 0.3, g: 0.6, b: 1, a: 1}
 --- !u!1 &434157899
 GameObject:
@@ -40277,7 +40279,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Placeholder
   owner: Room 2
   task: 'Corridor: three officers burst in through the squad door. No one else here.
-    When all three are down: Throw ability unlocked (LevelToast ''New ability: Throw'').'
+    When all three are down: the Throw ability unlocks (LevelToast ''New ability:
+    Throw'').'
   color: {r: 0.3, g: 0.6, b: 1, a: 1}
 --- !u!1 &1087440356
 GameObject:
@@ -50805,6 +50808,7 @@ MonoBehaviour:
   - {fileID: 467628535}
   - {fileID: 1581951914}
   - {fileID: 297676431}
+  debugCellExit: {x: 4.5, y: 0.05, z: 1.6}
   indoors:
     cutaway: 0
     distance: 22
