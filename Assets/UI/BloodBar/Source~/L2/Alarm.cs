@@ -2,7 +2,7 @@ using System.Collections;
 using UnityEngine;
 
 /// <summary>
-/// The corridor alarm: a siren and spinning red beacons that run only during the squad fight, never the whole level.
+/// The corridor alarm: a siren and flashing red beacons that run only during the squad fight, never the whole level.
 /// Trigger() when the squad bursts in, Stop() when it is beaten. As a safety net it also fades out by itself after
 /// maxSeconds, when he dies, and when he leaves the corridor.
 /// </summary>
@@ -13,10 +13,11 @@ public class Alarm : MonoBehaviour
     [Tooltip("The alarm never runs longer than this, even if the fight is still going.")]
     public float maxSeconds = 12f;
     public float fadeOutTime = 2f;
-    [Tooltip("The red beacon lights; they spin while the alarm runs.")]
+    [Tooltip("The red beacon lights (point lights); they flash while the alarm runs.")]
     public Light[] beacons = new Light[0];
-    public float beaconIntensity = 35f;
-    public float spinSpeed = 300f;
+    public float beaconIntensity = 18f;
+    [Tooltip("Flashes per second of the red beacons.")]
+    public float pulseRate = 1.5f;
 
     public bool IsOn { get; private set; }
 
@@ -66,7 +67,8 @@ public class Alarm : MonoBehaviour
     void Update()
     {
         if (!IsOn) return;
-        foreach (var b in beacons) if (b != null) b.transform.Rotate(0f, spinSpeed * Time.deltaTime, 0f, Space.World);
+        float pulse = 0.2f + 0.8f * Mathf.Abs(Mathf.Sin((Time.time - startedAt) * Mathf.PI * pulseRate));   // seen from above, a flash reads better than a spinning beam
+        foreach (var b in beacons) if (b != null) b.intensity = beaconIntensity * pulse;
         if (Time.time - startedAt >= maxSeconds) Stop();
     }
 
