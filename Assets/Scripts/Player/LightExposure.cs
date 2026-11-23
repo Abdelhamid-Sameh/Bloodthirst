@@ -22,6 +22,11 @@ public class LightExposure : MonoBehaviour
 
     public bool Exposed { get; private set; }
 
+    /// <summary>Level 2's dawn: the rising sun (set by SunriseClock) burns him like a lamp wherever no wall shades him.</summary>
+    public static Light sun;
+    /// <summary>The sun is over the walls: no shade anywhere.</summary>
+    public static bool sunBurnsEverywhere;
+
     VampireController controller;
     VampireBlood blood;
     ParticleSystem smoke, embers;
@@ -43,7 +48,7 @@ public class LightExposure : MonoBehaviour
     void Update()
     {
         bool canBurn = blood != null && blood.IsActive && !controller.IsDead && !controller.IsBusy && !GameState.Paused && !ShieldAbility.Active;
-        if (canBurn && Time.time >= nextCheck) { nextCheck = Time.time + 0.1f; litNow = InLamplight(); }
+        if (canBurn && Time.time >= nextCheck) { nextCheck = Time.time + 0.1f; litNow = InLamplight() || InSunlight(); }
         if (!canBurn) litNow = false;
 
         exposure = Mathf.MoveTowards(exposure, litNow ? 1f : 0f, Time.deltaTime / Mathf.Max(0.01f, settleTime));
@@ -69,6 +74,21 @@ public class LightExposure : MonoBehaviour
             foreach (Light f in lamp.followers) if (Burns(lamp, f, chest)) return true;
         }
         return false;
+    }
+
+    bool InSunlight()
+    {
+        if (sunBurnsEverywhere) return true;
+        if (sun == null || !sun.enabled || sun.intensity < 1f || sun.transform.forward.y > -0.05f) return false;
+        Vector3 chest = transform.position + Vector3.up * 1.2f;
+        foreach (RaycastHit hit in Physics.RaycastAll(chest, -sun.transform.forward, 120f, ~0, QueryTriggerInteraction.Ignore))
+        {
+            Transform t = hit.collider.transform;
+            if (t.IsChildOf(transform)) continue;
+            if (hit.collider.GetComponentInParent<HumanAI>() != null || hit.collider.GetComponentInParent<PoliceAI>() != null) continue;
+            return false;   // a wall or roof between him and the sun
+        }
+        return true;
     }
 
     bool Burns(LightFlicker lamp, Light l, Vector3 chest)

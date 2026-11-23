@@ -14,6 +14,8 @@ public class MusicPlayer : MonoBehaviour
     public float fadeInTime = 3f;
     [Tooltip("Music volume multiplier while the pause menu is open.")]
     [Range(0f, 1f)] public float pausedVolumeScale = 0.4f;
+    [Tooltip("Scales the music, eased (0 = silent). The Level 2 boss fight turns it down while its own theme plays.")]
+    [Range(0f, 1f)] public float duck = 1f;
 
     AudioSource musicSource;
     AudioSource ambienceSource;
@@ -52,7 +54,7 @@ public class MusicPlayer : MonoBehaviour
     void Update()
     {
         float pauseScale = GameState.Paused ? pausedVolumeScale : 1f;
-        musicSource.volume = Mathf.MoveTowards(musicSource.volume, musicVolume * GameSettings.MusicVolume * fade * pauseScale, Time.unscaledDeltaTime);
+        musicSource.volume = Mathf.MoveTowards(musicSource.volume, musicVolume * GameSettings.MusicVolume * fade * pauseScale * duck, Time.unscaledDeltaTime);
         ambienceSource.volume = ambienceVolume * fade;
     }
 }

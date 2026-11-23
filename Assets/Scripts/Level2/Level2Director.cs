@@ -124,7 +124,7 @@ public class Level2Director : MonoBehaviour
     public void BossDefeated()
     {
         if (Current >= Stage.Streets) return;
-        LevelToast.Show("The armored officer falls", "The gate is open");
+        LevelToast.Show("The Armoured Officer falls", "The gate is open");
         onBossDefeated.Invoke();
     }
 
