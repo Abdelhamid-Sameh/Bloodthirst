@@ -10,7 +10,7 @@ using UnityEngine.UI;
 /// Listen to onStageChanged to start your part; call Advance to move on; call BossDefeated when the armored officer falls.
 /// Blood does not drain in Level 2 (VampireBlood drain is 0 in this scene: the police serum). Damage and bites still count.
 /// Debug (vampire's debugKeys on): F5..F10 jump to each checkpoint in order, F11 = the boss is beaten,
-/// F4 = out of cell 1 (temporary, until the teleport escape exists).
+/// F4 = out of cell 1 (temporary, until the teleport escape exists), F12 = the ending (castle gate, news report, credits).
 /// </summary>
 public class Level2Director : MonoBehaviour
 {
@@ -27,6 +27,8 @@ public class Level2Director : MonoBehaviour
     public RoomCheckpoint[] checkpoints = new RoomCheckpoint[0];
     [Tooltip("TEMPORARY (debug key F4): just outside cell 1's bars, until Ali's teleport escape is in. Remove then.")]
     public Vector3 debugCellExit = new Vector3(4.5f, 0.05f, 1.6f);
+    [Tooltip("Debug key F12: inside the castle gate, then the ending plays.")]
+    public Vector3 debugCastle = new Vector3(-345f, 0.1f, 300f);
 
     /// <summary>How close the camera sits and how eagerly it hides things that block the view.</summary>
     [System.Serializable]
@@ -194,6 +196,7 @@ public class Level2Director : MonoBehaviour
         }
         if (kb.f11Key.wasPressedThisFrame) BossDefeated();
         if (kb.f4Key.wasPressedThisFrame) PlaceAt(debugCellExit, Quaternion.Euler(0f, 180f, 0f));
+        if (kb.f12Key.wasPressedThisFrame) { PlaceAt(debugCastle, Quaternion.Euler(0f, 270f, 0f)); Advance(Stage.Ending); }
     }
 
     void BuildFade()
