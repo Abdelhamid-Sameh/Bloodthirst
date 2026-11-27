@@ -92244,6 +92244,7 @@ MonoBehaviour:
   - {fileID: 1581951914}
   - {fileID: 297676431}
   debugCellExit: {x: 4.5, y: 0.05, z: 1.6}
+  debugCastle: {x: -345, y: 0.1, z: 300}
   indoors:
     cutaway: 0
     distance: 22
